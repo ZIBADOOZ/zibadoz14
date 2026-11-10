@@ -1,8 +1,9 @@
-name: Deploy to GitHub Pages
+
+name: Deploy Zibadoz to GitHub Pages
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -20,18 +21,29 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5
+
+      - name: Prepare frontend
+        run: |
+          mkdir -p _site/admin
+          cp public/index.html _site/index.html
+          cp public/config.js _site/config.js
+          cp public/robots.txt _site/robots.txt
+          cp -a public/. _site/
+          cp -a admin/. _site/admin/
+          touch _site/.nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: _site
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
