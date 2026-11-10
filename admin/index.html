@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#4a2c1d">
+<title>پنل مدیریت زیبادوز</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="../public/config.js"></script>
+<style>
+:root{
+  --brown:#4a2c1d; --leather:#7a4b30; --nes:#b08968; --cream:#f6efe4; --milk:#fffaf2;
+  --gold:#c9a45c; --text:#2b1a10; --muted:#7d6a5c; --line:#e4d6c2;
+  --in:#1f7a4d; --in-soft:#e7f4ee; --in-dot:#5ee9a5;
+  --out:#a13226; --out-soft:#faeae7; --out-dot:#f5b3aa;
+  --r:9px; --r-sm:7px; --r-lg:12px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Vazirmatn,Tahoma,sans-serif;background:var(--cream);color:var(--text);line-height:1.65;font-size:14px}
+.app-shell{min-height:100vh;display:flex;flex-direction:column}
+
+/* نوار بالا */
+.top{background:var(--brown);color:var(--cream);padding:11px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(74,44,29,.12)}
+.top .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;margin-inline-end:auto}
+.top .brand svg{width:24px;height:24px}
+.top button{background:transparent;color:var(--cream);border:1px solid rgba(201,164,92,.4);border-radius:18px;padding:5px 13px;cursor:pointer;font:inherit;font-size:12.5px;transition:all .15s;font-weight:500}
+.top button:hover{border-color:var(--gold);background:rgba(201,164,92,.1)}
+.top button.on{background:var(--gold);color:var(--brown);border-color:var(--gold);font-weight:600}
+.top button.danger{border-color:rgba(245,179,170,.5);color:#f5b3aa}
+.top button.danger:hover{background:rgba(245,179,170,.1)}
+
+main{max-width:1100px;margin:14px auto;padding:0 12px;width:100%;flex:1}
+.box{background:var(--milk);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;margin-bottom:12px}
+.box h3{margin:0 0 12px;font-size:15px;color:var(--brown);font-weight:700;display:flex;align-items:center;gap:7px}
+.box h3::before{content:"";width:3px;height:14px;background:var(--gold);border-radius:2px}
+label{display:block;font-size:12.5px;margin:8px 0 4px;color:var(--text);font-weight:500}
+input,select,textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-sm);font:inherit;background:var(--cream);color:var(--text);transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px rgba(201,164,92,.15)}
+input[type=checkbox]{width:auto;margin-inline-start:0}
+input[type=file]{padding:6px;background:var(--milk)}
+small{color:var(--muted);font-size:11.5px;display:block;margin-top:3px}
+
+/* دکمه‌ها */
+.bt{background:var(--brown);color:#fff;border:0;border-radius:var(--r-sm);padding:8px 14px;cursor:pointer;font:inherit;font-size:13px;font-weight:600;transition:background .15s;display:inline-flex;align-items:center;gap:5px}
+.bt:hover{background:var(--leather)}
+.bt.g{background:var(--in)}.bt.g:hover{background:#17633e}
+.bt.r{background:var(--out)}.bt.r:hover{background:#882a20}
+.bt.l{background:#888}.bt.l:hover{background:#777}
+.bt.gold{background:var(--gold);color:var(--brown)}.bt.gold:hover{background:#b8924d}
+
+/* جداول */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+td,th{padding:8px 7px;border-bottom:1px solid var(--line);text-align:right}
+th{color:var(--muted);font-weight:600;font-size:11.5px}
+.tbl{overflow-x:auto;margin-top:8px}
+tr:hover td{background:rgba(201,164,92,.04)}
+
+/* کارت‌های داشبورد */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.cards div{background:var(--milk);border:1px solid var(--line);border-radius:var(--r);padding:14px;transition:transform .15s,box-shadow .15s}
+.cards div:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(74,44,29,.08)}
+.cards .lbl{font-size:11.5px;color:var(--muted);font-weight:500}
+.cards b{font-size:22px;display:block;margin-top:4px;color:var(--brown);font-weight:700}
+
+/* گرید فرم */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+@media(max-width:640px){.g2,.g3{grid-template-columns:1fr}}
+
+/* بندانگشتی‌ها */
+.th{display:inline-block;margin:4px;text-align:center;font-size:11px}
+.th img{width:62px;height:62px;object-fit:cover;border-radius:var(--r-sm);display:block;border:1px solid var(--line)}
+.th label{font-size:11px;margin:3px 0 0}
+
+/* نشانگر موجودی */
+.stock{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:600;width:fit-content}
+.stock.in{background:var(--in-soft);color:var(--in);border:1px solid #b9e3cd}
+.stock.in .dot{width:8px;height:8px;border-radius:50%;background:var(--in-dot);box-shadow:0 0 0 0 rgba(94,233,165,.7);animation:blink 1.6s ease-in-out infinite}
+.stock.out{background:var(--out-soft);color:var(--out);border:1px solid #f0c9c3}
+.stock.out .dot{width:8px;height:8px;border-radius:50%;background:var(--out-dot)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.stock.in .dot{animation:none;opacity:1}}
+
+/* دکمه سریع موجود/ناموجود */
+.tg{padding:4px 9px;border-radius:6px;border:1px solid;font-size:11px;font-weight:600;cursor:pointer;font:inherit;transition:all .15s}
+.tg.in{border-color:#b9e3cd;background:var(--in-soft);color:var(--in)}
+.tg.in:hover{background:#d6ebdd}
+.tg.out{border-color:#f0c9c3;background:var(--out-soft);color:var(--out)}
+.tg.out:hover{background:#f3dcd7}
+
+/* فرم ورود */
+.login-card{max-width:340px;margin:60px auto;background:var(--milk);border:1px solid var(--line);border-radius:var(--r-lg);padding:22px;box-shadow:0 8px 20px rgba(74,44,29,.08)}
+.login-card h2{margin:0 0 14px;color:var(--brown);font-size:17px;font-weight:700;text-align:center}
+.login-logo{display:flex;justify-content:center;margin-bottom:14px}
+.login-logo svg{width:48px;height:48px}
+
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--brown);color:#fff;padding:10px 20px;border-radius:20px;display:none;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:60}
+.search-bar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.search-bar input{flex:1;min-width:160px}
+.note{font-size:12px;color:var(--muted);margin-top:6px}
+.account-order{border:1px solid var(--line);border-radius:var(--r-sm);padding:10px;margin:8px 0;font-size:13px}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.pill.green{background:var(--in-soft);color:var(--in)}
+.pill.red{background:var(--out-soft);color:var(--out)}
+.pill.gray{background:#eee;color:#666}
+</style>
+</head>
+<body>
+<div id="app" class="app-shell"></div>
+<div id="toast"></div>
+<script>
+let API=localStorage.zd_api||'',T=sessionStorage.zd_t||'',CATS=[];
+const $=id=>document.getElementById(id),app=$('app'),fa=n=>Number(n||0).toLocaleString('fa-IR'),
+esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
+normSearch=s=>String(s??'').normalize('NFKC').replace(/[يى]/g,'ی').replace(/ك/g,'ک').toLocaleLowerCase('fa').trim(),
+dt=d=>new Date(d).toLocaleString('fa-IR');
+const NEXT={pending_payment:['cancelled'],receipt_sent:['cancelled'],payment_rejected:['cancelled'],payment_confirmed:['preparing','ready','shipped','cancelled'],preparing:['ready','shipped','cancelled'],ready:['shipped','cancelled'],shipped:['delivered'],delivered:[],cancelled:[]};
+const ST={order_placed:'سفارش ثبت شد',pending_payment:'در انتظار تأیید پرداخت',receipt_sent:'رسید ارسال شد (در انتظار بررسی)',payment_confirmed:'پرداخت تأیید شد',payment_rejected:'پرداخت رد شد',preparing:'در حال آماده‌سازی',ready:'آماده ارسال',shipped:'سفارش ارسال شد',delivered:'تکمیل شد',cancelled:'لغو شد'};
+function stockBadge(s){
+  const n=Number(s)||0;
+  return n>0?`<span class="stock in"><span class="dot"></span>موجود</span>`:`<span class="stock out"><span class="dot"></span>ناموجود</span>`;
+}
+function toast(t){const x=$('toast');x.textContent=t;x.style.display='block';setTimeout(()=>x.style.display='none',2500)}
+async function api(p,o={}){const h={Authorization:'Bearer '+T};if(o.json){h['Content-Type']='application/json';o.body=JSON.stringify(o.json)}
+ let r;try{r=await fetch(API+'/api/admin'+p,{method:o.method||'GET',headers:h,body:o.body})}catch(e){toast('ارتباط با سرور برقرار نشد');throw e}
+ if(r.status===401&&T){logout();throw 0}if(o.blob)return r.blob();const d=await r.json().catch(()=>({}));if(!r.ok){toast(d.error||'خطا');throw 0}return d}
+function logout(){T='';sessionStorage.removeItem('zd_t');login()}
+const LOGO_SVG=`<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="40" height="40" rx="9" fill="#4a2c1d"/><path d="M11 27 L11 16 Q11 13 14 13 L26 13 Q29 13 29 16 L29 27" stroke="#c9a45c" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M14 13 Q14 9 20 9 Q26 9 26 13" stroke="#c9a45c" stroke-width="1.8" fill="none" stroke-linecap="round"/><circle cx="20" cy="20" r="1.5" fill="#c9a45c"/></svg>`;
+function login(){app.innerHTML=`<div class="login-card"><div class="login-logo">${LOGO_SVG}</div><h2>ورود مدیر زیبادوز</h2>
+<label>آدرس سرور (خالی = همین سایت)<input id="api" value="${esc(API)}" placeholder="https://example.com" dir="ltr"></label>
+<label>نام کاربری<input id="u" dir="ltr" autocomplete="off"></label>
+<label>رمز عبور<input id="p" type="password" dir="ltr" autocomplete="current-password"></label>
+<button class="bt gold" id="go" style="width:100%;justify-content:center">ورود</button>
+<p class="note">پس از ۵ تلاش ناموفق، حساب ۳۰ دقیقه قفل می‌شود.</p></div>`;
+ $('go').onclick=async()=>{API=$('api').value.trim().replace(/\/$/,'');localStorage.zd_api=API;
+  const btn=$('go');btn.disabled=true;btn.textContent='لطفاً صبر کنید…';
+  try{const r=await fetch(API+'/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:$('u').value,password:$('p').value})});
+  const d=await r.json();if(!r.ok){toast(d.error||'خطا');btn.disabled=false;btn.textContent='ورود';return}T=d.token;sessionStorage.zd_t=T;shell('dash')}catch(e){toast('ارتباط با سرور برقرار نشد');btn.disabled=false;btn.textContent='ورود'}}}
+function shell(v){const tabs={dash:'داشبورد',prod:'محصولات',cat:'دسته‌بندی‌ها',ord:'سفارش‌ها',coupon:'کدهای تخفیف',campaign:'کمپین‌ها',bundle:'بسته‌ها',questions:'پرسش‌ها',banner:'بنرها',reports:'گزارش‌ها',customers:'مشتریان',shipping:'ارسال',set:'تنظیمات'};
+ app.innerHTML=`<div class="top"><div class="brand">${LOGO_SVG}<span>پنل زیبادوز</span></div>${Object.entries(tabs).map(([k,n])=>`<button class="${k===v?'on':''}" data-v="${k}">${n}</button>`).join('')}<button class="danger" id="lo">خروج</button></div><main id="m"></main>`;
+ app.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>shell(b.dataset.v));$('lo').onclick=logout;({dash,prod,cat,ord,coupon,campaign,bundle,questions,banner,reports,customers,shipping,set})[v]()}
+async function dash(){const s=await api('/stats'),L={products:'کل محصولات',active:'محصولات فعال',out_of_stock:'ناموجود',pending:'در انتظار پرداخت',review:'در انتظار بررسی رسید',paid:'پرداخت‌شده',pending_completion:'در انتظار تکمیل',preparing:'در حال آماده‌سازی',shipped:'ارسال‌شده'};
+ $('m').innerHTML='<div class="cards">'+Object.entries(L).map(([k,n])=>`<div><span class="lbl">${n}</span><b>${fa(s[k])}</b></div>`).join('')+`<div><span class="lbl">مجموع فروش تأییدشده</span><b>${fa(s.revenue)}</b><span class="lbl">تومان</span></div></div>
+ <div class="box"><h3>راهنمای سریع</h3><p class="note">برای تغییر سریع موجودی هر محصول، از دکمه سبز/قرمز در فهرست محصولات استفاده کنید. کلیک روی «موجود» آن را «ناموجود» می‌کند (موجودی = ۰) و برعکس.</p></div>`}
+async function loadCats(){CATS=await api('/categories')}
+async function cat(){await loadCats();$('m').innerHTML=`<div class="box"><h3>دسته‌بندی‌ها</h3>${CATS.map(c=>`<div style="display:flex;gap:6px;margin:6px 0;align-items:center"><input value="${esc(c.name)}" id="c${c.id}" style="flex:1"><button class="bt" data-s="${c.id}">ذخیره</button><button class="bt r" data-d="${c.id}">حذف</button></div>`).join('')}
+<hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+<div style="display:flex;gap:6px"><input id="nc" placeholder="دسته‌بندی جدید" style="flex:1"><button class="bt g" id="ac">افزودن</button></div></div>`;
+ $('ac').onclick=async()=>{await api('/categories',{method:'POST',json:{name:$('nc').value}});toast('ذخیره شد');cat()};
+ document.querySelectorAll('[data-s]').forEach(b=>b.onclick=async()=>{await api('/categories/'+b.dataset.s,{method:'PUT',json:{name:$('c'+b.dataset.s).value}});toast('ذخیره شد')});
+ document.querySelectorAll('[data-d]').forEach(b=>b.onclick=async()=>{if(confirm('حذف شود؟')){await api('/categories/'+b.dataset.d,{method:'DELETE'});cat()}})}
+let PL=[];
+async function prod(){await loadCats();PL=await api('/products');$('m').innerHTML=`<div id="pf"></div><div class="box"><h3>فهرست محصولات</h3><div class="search-bar"><input id="fq" placeholder="جستجو در محصولات…"></div><div class="tbl"><table><thead><tr><th>نام</th><th>قیمت</th><th>موجودی</th><th>وضعیت</th><th>انتشار</th><th></th></tr></thead><tbody id="pt"></tbody></table></div></div>`;
+ const draw=()=>{const q=$('fq').value.trim();$('pt').innerHTML=PL.filter(p=>!q||normSearch([p.name,p.search_keywords,p.short_desc,p.description,p.colors,p.sizes].join(' ')).includes(normSearch(q))).map(p=>{
+   const price=p.discount_price||p.price;
+   return `<tr><td><b>${esc(p.name)}</b><br><small>${esc(p.short_desc||'')}</small></td><td>${fa(price)}${p.discount_price?`<br><small style="text-decoration:line-through">${fa(p.price)}</small>`:''}</td><td>${stockBadge(p.stock)}<br><small>${fa(p.stock)} عدد</small></td><td><button class="tg ${p.stock>0?'in':'out'}" data-toggle="${p.id}" data-st="${p.stock>0?1:0}">${p.stock>0?'موجود → ناموجود':'ناموجود → موجود'}</button></td><td>${p.published?'<span class="pill green">منتشر</span>':'<span class="pill gray">پیش‌نویس</span>'}</td><td><button class="bt" data-e="${p.id}">ویرایش</button> <button class="bt r" data-x="${p.id}">حذف</button></td></tr>`}).join('')||'<tr><td colspan="6" style="text-align:center;padding:20px">محصولی نیست</td></tr>';
+  document.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>form(PL.find(p=>p.id==b.dataset.e)));
+  document.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{if(confirm('محصول حذف شود؟')){await api('/products/'+b.dataset.x,{method:'DELETE'});toast('حذف شد');prod()}});
+  document.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=async()=>{const id=b.dataset.toggle;const cur=b.dataset.st==='1';const newStock=cur?0:1;try{const p=PL.find(x=>x.id==id);if(!p)return;const fd=new FormData();fd.set('name',p.name);fd.set('price',p.price);fd.set('discount_price',p.discount_price||'');fd.set('category_id',p.category_id||'');fd.set('stock',String(newStock));fd.set('colors',JSON.stringify(p.colors||[]));fd.set('sizes',JSON.stringify(p.sizes||[]));fd.set('short_desc',p.short_desc||'');fd.set('description',p.description||'');fd.set('keywords',p.search_keywords||'');fd.set('published',p.published?'1':'0');fd.set('featured',p.featured?'1':'0');fd.set('bestseller',p.bestseller?'1':'0');fd.set('main_image','');fd.set('remove_images','');await api('/products/'+id,{method:'PUT',body:fd});toast(newStock>0?'محصول موجود شد':'محصول ناموجود شد');prod()}catch(_){}})};
+ $('fq').oninput=draw;draw();form()}
+async function imgBlob(url){const b=await api(url,{blob:1});return URL.createObjectURL(b)}
+function form(p){
+  p=p||{};
+  const ck=v=>v?'checked':'';
+  // نرمال‌سازی colors/sizes از محصول فعلی
+  const colors = Array.isArray(p.colors) ? p.colors.map(c => typeof c === 'string' ? {name:c, hex:''} : c) : [];
+  const sizes = Array.isArray(p.sizes) ? p.sizes.map(s => typeof s === 'string' ? {name:s, price:null, stock:null, active:true} : s) : [];
+
+  $('pf').innerHTML=`<form class="box" id="f"><h3>${p.id?'ویرایش محصول':'افزودن محصول'}</h3><div class="g2">
+<label>نام محصول *<input name="name" required value="${esc(p.name)}"></label>
+<label>دسته‌بندی<select name="category_id"><option value="">—</option>${CATS.map(c=>`<option value="${c.id}" ${c.id==p.category_id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></label>
+<label>قیمت پایه (تومان) *<input name="price" type="number" min="1" required value="${p.price||''}"><small>قیمت اصلی محصول. اگر سایز با قیمت مستقل تعریف شود، قیمت سایز جایگزین می‌شود.</small></label>
+<label>قیمت تخفیف‌خورده<input name="discount_price" type="number" min="0" value="${p.discount_price||''}"></label>
+<label>موجودی کلی (عدد)<input name="stock" type="number" min="0" value="${p.stock??0}"><small>اگر سایز با موجودی مستقل تعریف شود، موجودی سایز اولویت دارد.</small></label>
+<label>کلمات کلیدی جستجو<input name="keywords" value="${esc(p.search_keywords||'')}" placeholder="bag, handbag, کیف دستی, travel bag"></label>
+</div>
+
+<!-- بخش رنگ‌ها -->
+<div style="margin:12px 0;padding:12px;background:var(--cream);border-radius:8px;border:1px solid var(--line)">
+  <b style="color:var(--brown);display:block;margin-bottom:8px">رنگ‌های محصول</b>
+  <div id="colorsList"></div>
+  <button type="button" class="bt" id="addColor" style="margin-top:8px">+ افزودن رنگ</button>
+</div>
+
+<!-- بخش سایزها -->
+<div style="margin:12px 0;padding:12px;background:var(--cream);border-radius:8px;border:1px solid var(--line)">
+  <b style="color:var(--brown);display:block;margin-bottom:8px">سایزها و قیمت مستقل</b>
+  <small style="color:var(--muted);display:block;margin-bottom:8px">برای هر سایز می‌توانید قیمت و موجودی مستقل تعیین کنید. اگر سایزی تعریف نشود، قیمت پایه محصول استفاده می‌شود.</small>
+  <div id="sizesList"></div>
+  <button type="button" class="bt" id="addSize" style="margin-top:8px">+ افزودن سایز</button>
+</div>
+
+<label>توضیح کوتاه<input name="short_desc" value="${esc(p.short_desc)}"></label>
+<label>توضیحات کامل<textarea name="description" rows="4">${esc(p.description)}</textarea></label>
+<label>تصاویر (چند تصویر؛ حداکثر ۵ مگابایت هر کدام)<input name="images" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div id="ims"></div>
+<div class="g3" style="margin-top:10px"><label><input type="checkbox" name="published" ${p.id?ck(p.published):'checked'}> منتشر شود</label><label><input type="checkbox" name="featured" ${ck(p.featured)}> ویژه</label><label><input type="checkbox" name="bestseller" ${ck(p.bestseller)}> پرفروش</label></div>
+<button class="bt g" style="margin-top:12px">${p.id?'ذخیره تغییرات':'افزودن محصول'}</button> ${p.id?'<button type="button" class="bt l" id="nw">محصول جدید</button>':''}</form>`;
+
+  (p.images||[]).forEach(async i=>{const u=API+'/uploads/products/'+i.file;$('ims').insertAdjacentHTML('beforeend',`<div class="th"><img src="${esc(u)}" alt=""><label><input type="radio" name="main_image" value="${i.id}" ${i.is_main?'checked':''}> اصلی</label><label><input type="checkbox" class="rmv" value="${i.id}"> حذف</label></div>`)});
+  if($('nw'))$('nw').onclick=()=>form();
+
+  // --- مدیریت رنگ‌ها ---
+  let colorIdx = 0;
+  const colorPresets = [
+    {name:'زرد',hex:'#FDD835'},{name:'قرمز',hex:'#E53935'},{name:'آبی',hex:'#1E88E5'},
+    {name:'سبز',hex:'#43A047'},{name:'مشکی',hex:'#212121'},{name:'سفید',hex:'#FAFAFA'},
+    {name:'صورتی',hex:'#EC407A'},{name:'بنفش',hex:'#8E24AA'},{name:'قهوه‌ای',hex:'#6D4C41'},
+    {name:'نارنجی',hex:'#FB8C00'},{name:'طوسی',hex:'#757575'},{name:'طلایی',hex:'#C9A45C'}
+  ];
+  function renderColorRow(idx, name='', hex='') {
+    const id = 'colorRow_'+idx;
+    return `<div id="${id}" style="display:flex;gap:6px;align-items:center;margin:6px 0">
+      <input type="color" value="${hex||'#999999'}" style="width:40px;height:34px;border:1px solid var(--line);border-radius:6px;cursor:pointer;padding:0" data-color-picker="${idx}">
+      <input type="text" placeholder="نام رنگ" value="${esc(name)}" style="flex:1" data-color-name="${idx}" list="colorPresets">
+      <button type="button" class="bt r" style="padding:4px 10px" data-color-del="${idx}">✕</button>
+    </div>`;
+  }
+  function addColorRow(name='', hex='') {
+    const idx = colorIdx++;
+    $('colorsList').insertAdjacentHTML('beforeend', renderColorRow(idx, name, hex));
+    const row = $('colorRow_'+idx);
+    row.querySelector('[data-color-del]').onclick = () => row.remove();
+  }
+  // پیش‌فرض‌های رنگ
+  $('colorsList').insertAdjacentHTML('beforeend', '<datalist id="colorPresets">'+colorPresets.map(c=>`<option value="${c.name}" data-hex="${c.hex}">`).join('')+'</datalist>');
+  // بارگذاری رنگ‌های موجود
+  if (colors.length) {
+    colors.forEach(c => addColorRow(c.name||'', c.hex||''));
+  }
+  $('addColor').onclick = () => addColorRow();
+
+  // --- مدیریت سایزها ---
+  let sizeIdx = 0;
+  function renderSizeRow(idx, name='', price='', stock='', active=true) {
+    const id = 'sizeRow_'+idx;
+    return `<div id="${id}" style="display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap">
+      <input type="text" placeholder="نام سایز" value="${esc(name)}" style="flex:1;min-width:100px" data-size-name="${idx}">
+      <input type="number" placeholder="قیمت (تومان)" value="${price||''}" min="0" style="width:130px" data-size-price="${idx}">
+      <input type="number" placeholder="موجودی" value="${stock!==null&&stock!==undefined?stock:''}" min="0" style="width:80px" data-size-stock="${idx}">
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" data-size-active="${idx}" ${active?'checked':''}> فعال</label>
+      <button type="button" class="bt r" style="padding:4px 10px" data-size-del="${idx}">✕</button>
+    </div>`;
+  }
+  function addSizeRow(name='', price='', stock='', active=true) {
+    const idx = sizeIdx++;
+    $('sizesList').insertAdjacentHTML('beforeend', renderSizeRow(idx, name, price, stock, active));
+    const row = $('sizeRow_'+idx);
+    row.querySelector('[data-size-del]').onclick = () => row.remove();
+  }
+  if (sizes.length) {
+    sizes.forEach(s => addSizeRow(s.name||'', s.price||'', s.stock, s.active!==false));
+  }
+  $('addSize').onclick = () => addSizeRow();
+
+  // --- هندلر سابمیت: جمع‌آوری colors و sizes و ارسال به‌عنوان JSON ---
+  $('f').onsubmit=async e=>{
+    e.preventDefault();
+    const fd=new FormData(e.target);
+    ['published','featured','bestseller'].forEach(k=>fd.set(k,e.target[k].checked?'1':'0'));
+    fd.set('remove_images',[...document.querySelectorAll('.rmv:checked')].map(x=>x.value).join(','));
+
+    // جمع‌آوری رنگ‌ها
+    const colorsArr = [];
+    $('colorsList').querySelectorAll('[data-color-name]').forEach((inp, i) => {
+      const idx = inp.dataset.colorName;
+      const name = inp.value.trim();
+      const hex = $('colorsList').querySelector(`[data-color-picker="${idx}"]`)?.value || '#999999';
+      if (name) colorsArr.push({ name, hex });
+    });
+    fd.set('colors', JSON.stringify(colorsArr));
+
+    // جمع‌آوری سایزها
+    const sizesArr = [];
+    $('sizesList').querySelectorAll('[data-size-name]').forEach((inp) => {
+      const idx = inp.dataset.sizeName;
+      const name = inp.value.trim();
+      const price = $('sizesList').querySelector(`[data-size-price="${idx}"]`)?.value;
+      const stock = $('sizesList').querySelector(`[data-size-stock="${idx}"]`)?.value;
+      const active = $('sizesList').querySelector(`[data-size-active="${idx}"]`)?.checked;
+      if (name) sizesArr.push({
+        name,
+        price: price ? Math.round(+price) : null,
+        stock: stock !== '' ? Math.max(0, parseInt(stock)) : null,
+        active: active !== false
+      });
+    });
+    fd.set('sizes', JSON.stringify(sizesArr));
+
+    try{await api('/products'+(p.id?'/'+p.id:''),{method:p.id?'PUT':'POST',body:fd});toast(p.id?'محصول ویرایش شد':'محصول اضافه شد');prod()}catch(_){}}
+}
+async function ord(){$('m').innerHTML=`<div class="box"><h3>سفارش‌ها</h3><div class="search-bar"><select id="sf"><option value="">همه وضعیت‌ها</option><option value="pending_completion">در انتظار تکمیل</option>${Object.entries(ST).map(([k,n])=>`<option value="${k}">${n}</option>`).join('')}</select> <button class="bt" id="pc">در انتظار تکمیل</button> <button class="bt r" id="clearFinished" title="حذف همه سفارش‌های تکمیل‌شده و لغوشده">پاک‌کردن سفارش‌های پایان‌شده</button></div><div class="tbl"><table><thead><tr><th>شماره</th><th>مشتری</th><th>مبلغ</th><th>وضعیت</th><th>تاریخ</th><th></th></tr></thead><tbody id="ot"></tbody></table></div></div><div id="od"></div>`;
+ const load=async()=>{const l=await api('/orders'+($('sf').value?'?status='+$('sf').value:''));$('ot').innerHTML=l.map(o=>`<tr><td dir="ltr">${esc(o.order_number)}</td><td>${esc(o.name)}<br><small dir="ltr">${esc(o.mobile)}</small></td><td>${fa(o.total)}</td><td><span class="pill ${o.status==='delivered'?'green':o.status==='cancelled'?'red':'gray'}">${ST[o.status]||o.status}</span></td><td><small>${dt(o.created_at)}</small></td><td><button class="bt" data-o="${o.id}">جزئیات</button> <button class="bt r" data-del="${o.id}" title="حذف این سفارش">حذف</button></td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;padding:20px">سفارشی نیست</td></tr>';
+  document.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>detail(b.dataset.o));
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{if(confirm('این سفارش حذف شود؟ این کار قابل بازگشت نیست.')){try{await api('/orders/'+b.dataset.del,{method:'DELETE'});toast('سفارش حذف شد');load()}catch(_){}}});};
+ $('sf').onchange=load;
+ $('pc').onclick=()=>{$('sf').value='pending_completion';load()};
+ $('clearFinished').onclick=async()=>{if(!confirm('همه سفارش‌های «تکمیل‌شده» و «لغوشده» حذف شوند؟ سفارش‌های در حال پردازش نگه داشته می‌شوند.'))return;try{const r=await api('/orders/clear-finished',{method:'POST',json:{}});toast(`${r.deleted} سفارش پاک شد`);load()}catch(_){}};
+ load()}
+async function detail(id){const o=await api('/orders/'+id);
+ $('od').innerHTML=`<div class="box"><h3>سفارش ${esc(o.order_number)} — ${ST[o.status]}</h3><p>${esc(o.name)} | ${esc(o.mobile)}<br>${esc(o.province)}، ${esc(o.city)}، ${esc(o.address)} | کدپستی: ${esc(o.postal_code)}<br>توضیحات مشتری: ${esc(o.notes||'—')}</p>
+<div class="tbl"><table><tr><th>محصول</th><th>رنگ</th><th>سایز</th><th>تعداد</th><th>قیمت واحد</th></tr>${o.items.map(i=>`<tr><td>${esc(i.name)}</td><td>${esc(i.color||'—')}</td><td>${esc(i.size||'—')}</td><td>${fa(i.qty)}</td><td>${fa(i.unit_price)}</td></tr>`).join('')}</table></div>
+<p>جمع: ${fa(o.subtotal)} | ارسال: ${fa(o.shipping)} | <b>مبلغ نهایی: ${fa(o.total)} تومان</b></p>
+<h3 style="margin-top:14px">رسیدها</h3><div id="rc">${o.receipts.map(r=>`<div class="th"><img data-r="${r.id}" alt=""><br>${r.status}${r.reject_reason?'<br>'+esc(r.reject_reason):''}</div>`).join('')||'<small>رسیدی ارسال نشده</small>'}</div>
+${o.status==='receipt_sent'?`<div style="margin:12px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="bt g" id="ap">تأیید پرداخت</button><input id="rr" placeholder="دلیل رد پرداخت" style="width:240px"><button class="bt r" id="rj">رد پرداخت</button></div>`:''}
+<div class="g2"><label>وضعیت<select id="ns">${[o.status,...(NEXT[o.status]||[])].map(k=>`<option value="${k}" ${k==o.status?'selected':''}>${ST[k]||k}</option>`).join('')}</select></label><label>کد رهگیری پستی<input id="tc" value="${esc(o.tracking_code)}" dir="ltr"></label></div>
+<label>یادداشت داخلی مدیر<textarea id="an" rows="2">${esc(o.admin_note)}</textarea></label><button class="bt" id="sv">ذخیره وضعیت</button>
+<hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="bt r" id="delOrder">حذف این سفارش</button><small style="color:var(--muted)">حذف سفارش از دیتابیس؛ قابل بازگشت نیست.</small></div>
+<h3 style="margin-top:14px">سابقه</h3>${o.history.map(h=>`<div style="font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--line)"><small>${dt(h.created_at)}</small> — <b>${ST[h.status]||h.status}</b> ${esc(h.note||'')} ${h.by_admin?'<small>('+esc(h.by_admin)+')</small>':''}</div>`).join('')}</div>`;
+ document.querySelectorAll('[data-r]').forEach(async i=>{try{i.src=await imgBlob('/receipts/'+i.dataset.r+'/file');i.onclick=()=>window.open(i.src)}catch(_){}});
+ if($('ap'))$('ap').onclick=async()=>{if(confirm('پرداخت تأیید شود؟')){await api('/orders/'+id+'/payment',{method:'POST',json:{action:'approve'}});toast('پرداخت تأیید شد');detail(id)}};
+ if($('rj'))$('rj').onclick=async()=>{await api('/orders/'+id+'/payment',{method:'POST',json:{action:'reject',reason:$('rr').value}});toast('پرداخت رد شد');detail(id)};
+ $('sv').onclick=async()=>{const next=$('ns').value;if(next==='shipped'&&!$('tc').value.trim()&&!confirm('کد رهگیری پستی وارد نشده است. ادامه می‌دهید؟'))return;await api('/orders/'+id+'/status',{method:'PATCH',json:{status:next,tracking_code:$('tc').value,admin_note:$('an').value,note:next==='shipped'?'سفارش ارسال شد':''}});toast('وضعیت سفارش ذخیره شد');detail(id)};
+ $('delOrder').onclick=async()=>{if(confirm('این سفارش برای همیشه حذف شود؟ قابل بازگشت نیست.')){try{await api('/orders/'+id,{method:'DELETE'});toast('سفارش حذف شد');ord()}catch(_){}}};
+ $('od').scrollIntoView()}
+async function coupon(){const rows=await api('/coupons');$('m').innerHTML=`<div class="box"><h3>ساخت کد تخفیف</h3><form id="couponForm"><div class="g3"><label>کد تخفیف<input name="code" required minlength="3" maxlength="30" placeholder="WELCOME10" dir="ltr"></label><label>نوع تخفیف<select name="discount_type"><option value="percent">درصدی</option><option value="fixed">مبلغ ثابت</option></select></label><label>مقدار<input name="discount_value" type="number" min="1" required></label></div><div class="g3"><label>حداقل خرید<input name="min_order" type="number" min="0" value="0"></label><label>حداکثر استفاده<input name="usage_limit" type="number" min="1" placeholder="نامحدود"></label><label>تاریخ انقضا<input name="expires_at" type="date"></label></div><label style="margin-top:10px"><input type="checkbox" name="active" checked> فعال باشد</label><button class="bt g">ذخیره کد تخفیف</button></form></div><div class="box"><h3>کدهای ثبت‌شده</h3><div class="tbl"><table><thead><tr><th>کد</th><th>نوع</th><th>مقدار</th><th>استفاده</th><th>وضعیت</th><th></th></tr></thead><tbody>${rows.map(c=>`<tr><td dir="ltr">${esc(c.code)}</td><td>${c.discount_type==='percent'?'درصدی':'ثابت'}</td><td>${fa(c.discount_value)}${c.discount_type==='percent'?'٪':''}</td><td>${fa(c.used_count)}/${c.usage_limit??'∞'}</td><td>${c.active?'<span class="pill green">فعال</span>':'<span class="pill gray">غیرفعال</span>'}</td><td><button class="bt" data-toggle="${c.id}" data-active="${!c.active}">${c.active?'غیرفعال‌کردن':'فعال‌کردن'}</button> <button class="bt r" data-delete="${c.id}">حذف</button></td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;padding:20px">هنوز کدی ثبت نشده است</td></tr>'}</tbody></table></div></div>`;
+$('couponForm').onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));f.active=e.target.active.checked;await api('/coupons',{method:'POST',json:f});toast('کد تخفیف ذخیره شد');coupon()};document.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=async()=>{await api('/coupons/'+b.dataset.toggle,{method:'PATCH',json:{active:b.dataset.active==='true'}});coupon()});document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{if(confirm('این کد تخفیف حذف شود؟')){await api('/coupons/'+b.dataset.delete,{method:'DELETE'});coupon()}})}
+
+// ---------- مدیریت نظرات (فاز ۲) ----------
+async function reviews(){
+  const filter = await loadReviewsFilterUI();
+  $('m').innerHTML = `<div class="box"><h3>نظرات محصولات</h3><div class="search-bar"><select id="rFilter"><option value="">همه (${filter.total||0})</option><option value="pending">در انتظار (${filter.pending||0})</option><option value="approved">تأییدشده (${filter.approved||0})</option><option value="rejected">ردشده (${filter.rejected||0})</option></select></div><div class="tbl"><table><thead><tr><th>محصول</th><th>نویسنده</th><th>امتیاز</th><th>متن</th><th>وضعیت</th><th>تاریخ</th><th></th></tr></thead><tbody id="rt"></tbody></table></div></div><div id="rd"></div>`;
+  const load = async () => {
+    const status = $('rFilter').value;
+    const url = '/reviews' + (status ? '?status=' + status : '');
+    const list = await api(url);
+    $('rt').innerHTML = list.length ? list.map(r => `<tr>
+      <td><b>${esc(r.product_name||'—')}</b><br><small>${esc(r.product_slug||'')}</small></td>
+      <td>${esc(r.author_name||'—')}<br><small dir="ltr">${esc(r.author_email||r.author_mobile||'')}</small>${r.verified_buyer?'<br><span class="pill green">خریدار</span>':''}</td>
+      <td><span class="stars" style="font-size:13px">${starsAdmin(r.rating)}</span></td>
+      <td style="max-width:300px">${r.title?`<b>${esc(r.title)}</b><br>`:''}${esc((r.body||'').slice(0,150))}${(r.body||'').length>150?'…':''}</td>
+      <td><span class="pill ${r.status==='approved'?'green':r.status==='rejected'?'red':'gray'}">${{pending:'در انتظار',approved:'تأییدشده',rejected:'ردشده'}[r.status]||r.status}</span></td>
+      <td><small>${dt(r.created_at)}</small></td>
+      <td><button class="bt" data-ri="${r.id}">جزئیات</button></td>
+    </tr>`).join('') : '<tr><td colspan="7" style="text-align:center;padding:20px">نظری نیست</td></tr>';
+    document.querySelectorAll('[data-ri]').forEach(b => b.onclick = () => reviewDetail(b.dataset.ri));
+  };
+  $('rFilter').onchange = load;
+  load();
+}
+function starsAdmin(n){
+  let html = '';
+  for (let i = 1; i <= 5; i++) html += `<span style="color:${i<=n?'#d4af37':'#ddd1b3'}">★</span>`;
+  return html;
+}
+async function loadReviewsFilterUI(){
+  // شمارش نظرات در هر وضعیت — بدون endpoint اختصاصی، کل لیست را بارگذاری می‌کنیم
+  try {
+    const all = await api('/reviews');
+    return {
+      total: all.length,
+      pending: all.filter(r => r.status === 'pending').length,
+      approved: all.filter(r => r.status === 'approved').length,
+      rejected: all.filter(r => r.status === 'rejected').length
+    };
+  } catch(_) { return {}; }
+}
+async function reviewDetail(id){
+  const all = await api('/reviews');
+  const r = all.find(x => String(x.id) === String(id));
+  if (!r) { toast('نظر پیدا نشد'); return; }
+  $('rd').innerHTML = `<div class="box"><h3>نظر ${faNum(r.id)} — ${r.product_name||'—'}</h3>
+    <p><b>نویسنده:</b> ${esc(r.author_name||'—')} <small dir="ltr">${esc(r.author_email||r.author_mobile||'')}</small>${r.verified_buyer?' <span class="pill green">خریدار تأییدشده</span>':''}</p>
+    <p><b>محصول:</b> <a href="/product/${esc(r.product_slug||'')}" target="_blank" style="color:var(--gold)">${esc(r.product_name||'—')}</a></p>
+    ${r.title?`<p><b>عنوان:</b> ${esc(r.title)}</p>`:''}
+    <p><b>امتیاز:</b> <span class="stars" style="font-size:16px">${starsAdmin(r.rating)}</span></p>
+    <p><b>متن:</b></p><div style="background:var(--cream);border-radius:8px;padding:10px;white-space:pre-wrap">${esc(r.body||'')}</div>
+    ${r.reject_reason?`<p><b>دلیل رد:</b> ${esc(r.reject_reason)}</p>`:''}
+    <p><b>وضعیت فعلی:</b> <span class="pill ${r.status==='approved'?'green':r.status==='rejected'?'red':'gray'}">${{pending:'در انتظار',approved:'تأییدشده',rejected:'ردشده'}[r.status]}</span></p>
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="bt g" id="rvApprove">تأیید نظر</button>
+      <input id="rvRejectReason" placeholder="دلیل رد (اختیاری)" style="width:240px">
+      <button class="bt r" id="rvReject">رد نظر</button>
+      <button class="bt l" id="rvPending">بازگردانی به انتظار</button>
+      <button class="bt r" id="rvDelete">حذف نظر</button>
+    </div>
+  </div>`;
+  if ($('rvApprove')) $('rvApprove').onclick = async () => {
+    await api('/reviews/' + id, { method: 'PATCH', json: { status: 'approved' } });
+    toast('نظر تأیید شد'); reviewDetail(id);
+  };
+  if ($('rvReject')) $('rvReject').onclick = async () => {
+    const reason = $('rvRejectReason').value.trim();
+    await api('/reviews/' + id, { method: 'PATCH', json: { status: 'rejected', reject_reason: reason } });
+    toast('نظر رد شد'); reviewDetail(id);
+  };
+  if ($('rvPending')) $('rvPending').onclick = async () => {
+    await api('/reviews/' + id, { method: 'PATCH', json: { status: 'pending' } });
+    toast('بازگردانی شد'); reviewDetail(id);
+  };
+  if ($('rvDelete')) $('rvDelete').onclick = async () => {
+    if (confirm('این نظر حذف شود؟')) {
+      await api('/reviews/' + id, { method: 'DELETE' });
+      toast('نظر حذف شد'); reviews();
+    }
+  };
+  $('rd').scrollIntoView();
+}
+
+// ---------- مدیریت پرسش و پاسخ (فاز ۲) ----------
+async function questions(){
+  const filter = await loadQuestionsFilterUI();
+  $('m').innerHTML = `<div class="box"><h3>پرسش و پاسخ</h3><div class="search-bar"><select id="qFilter"><option value="">همه (${filter.total||0})</option><option value="pending">در انتظار پاسخ (${filter.pending||0})</option><option value="answered">پاسخ‌داده‌شده (${filter.answered||0})</option><option value="hidden">پنهان (${filter.hidden||0})</option></select></div><div class="tbl"><table><thead><tr><th>محصول</th><th>پرسش</th><th>پرسنده</th><th>وضعیت</th><th>تاریخ</th><th></th></tr></thead><tbody id="qt"></tbody></table></div></div><div id="qd"></div>`;
+  const load = async () => {
+    const status = $('qFilter').value;
+    const url = '/questions' + (status ? '?status=' + status : '');
+    const list = await api(url);
+    $('qt').innerHTML = list.length ? list.map(q => `<tr>
+      <td><b>${esc(q.product_name||'—')}</b></td>
+      <td style="max-width:300px">${esc((q.question||'').slice(0,150))}${(q.question||'').length>150?'…':''}</td>
+      <td>${esc(q.asker_name||'—')}<br><small dir="ltr">${esc(q.asker_email||q.asker_mobile||'')}</small></td>
+      <td><span class="pill ${q.status==='answered'?'green':q.status==='hidden'?'red':'gray'}">${{pending:'در انتظار',answered:'پاسخ‌داده',hidden:'پنهان'}[q.status]||q.status}</span></td>
+      <td><small>${dt(q.created_at)}</small></td>
+      <td><button class="bt" data-qi="${q.id}">جزئیات</button></td>
+    </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;padding:20px">پرسشی نیست</td></tr>';
+    document.querySelectorAll('[data-qi]').forEach(b => b.onclick = () => questionDetail(b.dataset.qi));
+  };
+  $('qFilter').onchange = load;
+  load();
+}
+async function loadQuestionsFilterUI(){
+  try {
+    const all = await api('/questions');
+    return {
+      total: all.length,
+      pending: all.filter(q => q.status === 'pending').length,
+      answered: all.filter(q => q.status === 'answered').length,
+      hidden: all.filter(q => q.status === 'hidden').length
+    };
+  } catch(_) { return {}; }
+}
+async function questionDetail(id){
+  const all = await api('/questions');
+  const q = all.find(x => String(x.id) === String(id));
+  if (!q) { toast('پرسش پیدا نشد'); return; }
+  $('qd').innerHTML = `<div class="box"><h3>پرسش ${faNum(q.id)}</h3>
+    <p><b>محصول:</b> <a href="/product/${esc(q.product_slug||'')}" target="_blank" style="color:var(--gold)">${esc(q.product_name||'—')}</a></p>
+    <p><b>پرسنده:</b> ${esc(q.asker_name||'—')} <small dir="ltr">${esc(q.asker_email||q.asker_mobile||'')}</small></p>
+    <p><b>پرسش:</b></p><div style="background:var(--cream);border-radius:8px;padding:10px;white-space:pre-wrap">${esc(q.question||'')}</div>
+    ${q.answer?`<p style="margin-top:10px"><b>پاسخ فعلی:</b></p><div style="background:var(--in-soft);border-radius:8px;padding:10px;white-space:pre-wrap;border-inline-start:3px solid var(--in)">${esc(q.answer)}</div>`:''}
+    <p style="margin-top:10px"><b>پاسخ خود را بنویسید:</b></p>
+    <textarea id="qaAnswer" rows="4" placeholder="متن پاسخ…">${esc(q.answer||'')}</textarea>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="bt g" id="qaSubmit">ثبت پاسخ و انتشار</button>
+      <button class="bt l" id="qaHide">پنهان‌کردن</button>
+      <button class="bt" id="qaPending">بازگردانی به انتظار</button>
+      <button class="bt r" id="qaDelete">حذف پرسش</button>
+    </div>
+  </div>`;
+  if ($('qaSubmit')) $('qaSubmit').onclick = async () => {
+    const answer = $('qaAnswer').value.trim();
+    if (!answer) return toast('متن پاسخ را بنویسید');
+    await api('/questions/' + id, { method: 'PATCH', json: { status: 'answered', answer } });
+    toast('پاسخ ثبت شد'); questionDetail(id);
+  };
+  if ($('qaHide')) $('qaHide').onclick = async () => {
+    await api('/questions/' + id, { method: 'PATCH', json: { status: 'hidden' } });
+    toast('پرسش پنهان شد'); questionDetail(id);
+  };
+  if ($('qaPending')) $('qaPending').onclick = async () => {
+    await api('/questions/' + id, { method: 'PATCH', json: { status: 'pending' } });
+    toast('بازگردانی شد'); questionDetail(id);
+  };
+  if ($('qaDelete')) $('qaDelete').onclick = async () => {
+    if (confirm('این پرسش حذف شود؟')) {
+      await api('/questions/' + id, { method: 'DELETE' });
+      toast('پرسش حذف شد'); questions();
+    }
+  };
+  $('qd').scrollIntoView();
+}
+
+// ---------- مدیریت بنرهای تبلیغاتی ----------
+let BL=[];
+async function banner(){
+  await loadCats();
+  BL=await api('/banners');
+  $('m').innerHTML=`<div id="bf"></div><div class="box"><h3>فهرست بنرها</h3><div class="tbl"><table><thead><tr><th>تصویر</th><th>عنوان</th><th>مقصد</th><th>ترتیب</th><th>وضعیت</th><th></th></tr></thead><tbody id="bt"></tbody></table></div></div>`;
+  const draw=()=>{
+    $('bt').innerHTML=BL.length?BL.map(b=>`<tr>
+      <td><img src="${esc(b.image||'')}" alt="" style="width:80px;height:34px;object-fit:cover;border-radius:4px;border:1px solid var(--line)"></td>
+      <td><b>${esc(b.title)}</b></td>
+      <td>${b.category_name?esc(b.category_name):'<span class="pill gray">— حذف‌شده</span>'}</td>
+      <td>${fa(b.sort_order)}</td>
+      <td>${b.is_active?'<span class="pill green">فعال</span>':'<span class="pill gray">غیرفعال</span>'}</td>
+      <td><button class="bt" data-e="${b.id}">ویرایش</button> <button class="bt r" data-x="${b.id}">حذف</button></td>
+    </tr>`).join(''):'<tr><td colspan="6" style="text-align:center;padding:20px">هنوز بنری ثبت نشده است</td></tr>';
+    document.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>bannerForm(BL.find(x=>x.id==b.dataset.e)));
+    document.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{if(confirm('این بنر حذف شود؟ تصویر آن هم پاک می‌شود.')){await api('/banners/'+b.dataset.x,{method:'DELETE'});toast('بنر حذف شد');banner()}});
+  };
+  draw();
+  bannerForm();
+}
+function bannerForm(b){
+  b=b||{};
+  $('bf').innerHTML=`<form class="box" id="bfm"><h3>${b.id?'ویرایش بنر':'افزودن بنر جدید'}</h3>
+    <label>عنوان داخلی بنر *<input name="title" required maxlength="200" value="${esc(b.title||'')}" placeholder="مثلاً: تخفیف پاییزی"></label>
+    <div class="g2">
+      <label>دسته‌بندی مقصد<select name="category_id"><option value="">— بدون مقصد —</option>${CATS.map(c=>`<option value="${c.id}" ${c.id==b.category_id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></label>
+      <label>ترتیب نمایش<input name="sort_order" type="number" min="0" value="${b.sort_order??0}"><small>اعداد کوچک‌تر اول نمایش داده می‌شوند.</small></label>
+    </div>
+    <label>تصویر بنر<input name="image" type="file" accept="image/jpeg,image/png,image/webp"></label>
+    <small>اندازه پیشنهادی تصویر: ۱۲۰۰ × ۵۰۰ پیکسل | نسبت تصویر: ۱۲:۵ | حداکثر حجم: ۵۰۰ کیلوبایت | فرمت مجاز: WebP، JPG، PNG</small>
+    ${b.image?`<div class="th" style="margin-top:8px"><img src="${esc(b.image)}" alt="" style="width:120px;height:50px;object-fit:cover;border-radius:4px;border:1px solid var(--line)"><label>تصویر فعلی</label></div>`:''}
+    <label style="margin-top:10px"><input type="checkbox" name="is_active" ${b.is_active!==false?'checked':''}> فعال باشد</label>
+    <button class="bt g" style="margin-top:12px">${b.id?'ذخیره تغییرات':'افزودن بنر'}</button>
+    ${b.id?'<button type="button" class="bt l" id="bnw">بنر جدید</button>':''}
+  </form>`;
+  if($('bnw'))$('bnw').onclick=()=>bannerForm();
+  $('bfm').onsubmit=async e=>{
+    e.preventDefault();
+    const fd=new FormData(e.target);
+    fd.set('is_active',e.target.is_active.checked?'1':'0');
+    try{
+      await api('/banners'+(b.id?'/'+b.id:''),{method:b.id?'PUT':'POST',body:fd});
+      toast(b.id?'بنر ویرایش شد':'بنر اضافه شد');
+      banner();
+    }catch(_){}
+  };
+}
+// ---------- مدیریت کمپین‌ها ----------
+let CAMP=[];
+async function campaign(){
+  await loadCats();
+  CAMP=await api('/campaigns');
+  $('m').innerHTML=`<div id="cf"></div><div class="box"><h3>فهرست کمپین‌ها</h3><div class="tbl"><table><thead><tr><th>عنوان</th><th>تخفیف</th><th>دوره</th><th>وضعیت</th><th></th></tr></thead><tbody id="ct"></tbody></table></div></div>`;
+  const draw=()=>{
+    $('ct').innerHTML=CAMP.length?CAMP.map(c=>`<tr>
+      <td><b>${esc(c.title)}</b>${c.image?`<br><img src="${esc(c.image)}" style="width:60px;height:25px;object-fit:cover;border-radius:3px;margin-top:3px">`:''}</td>
+      <td>${c.discount_type==='percent'?fa(c.discount_value)+'٪':fa(c.discount_value)}</td>
+      <td><small>${c.starts_at?new Date(c.starts_at).toLocaleDateString('fa-IR'):''} تا ${c.ends_at?new Date(c.ends_at).toLocaleDateString('fa-IR'):'نامحدود'}</small></td>
+      <td>${c.is_active?'<span class="pill green">فعال</span>':'<span class="pill gray">غیرفعال</span>'}</td>
+      <td><button class="bt" data-e="${c.id}">ویرایش</button> <button class="bt r" data-x="${c.id}">حذف</button></td>
+    </tr>`).join(''):'<tr><td colspan="5" style="text-align:center;padding:20px">کمپینی نیست</td></tr>';
+    document.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>campaignForm(CAMP.find(x=>x.id==b.dataset.e)));
+    document.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{if(confirm('حذف شود؟')){await api('/campaigns/'+b.dataset.x,{method:'DELETE'});toast('حذف شد');campaign()}});
+  };
+  draw(); campaignForm();
+}
+function campaignForm(c){
+  c=c||{};
+  $('cf').innerHTML=`<form class="box" id="campF"><h3>${c.id?'ویرایش کمپین':'افزودن کمپین'}</h3>
+    <label>عنوان *<input name="title" required value="${esc(c.title||'')}"></label>
+    <div class="g2">
+      <label>نوع تخفیف<select name="discount_type"><option value="percent" ${c.discount_type==='percent'?'selected':''}>درصدی</option><option value="fixed" ${c.discount_type==='fixed'?'selected':''}>مبلغ ثابت</option></select></label>
+      <label>مقدار تخفیف *<input name="discount_value" type="number" min="1" required value="${c.discount_value||''}"></label>
+    </div>
+    <label>دسته‌بندی مشمول (اختیاری)<select name="category_id"><option value="">همه دسته‌ها</option>${CATS.map(cat=>`<option value="${cat.id}" ${cat.id==c.category_id?'selected':''}>${esc(cat.name)}</option>`).join('')}</select></label>
+    <div class="g2">
+      <label>تاریخ شروع<input name="starts_at" type="datetime-local" value="${c.starts_at?new Date(c.starts_at).toISOString().slice(0,16):''}"></label>
+      <label>تاریخ پایان (اختیاری)<input name="ends_at" type="datetime-local" value="${c.ends_at?new Date(c.ends_at).toISOString().slice(0,16):''}"></label>
+    </div>
+    <label>تصویر کمپین (اختیاری)<input name="image" type="file" accept="image/jpeg,image/png,image/webp"></label>
+    ${c.image?`<img src="${esc(c.image)}" style="width:100px;height:42px;object-fit:cover;border-radius:4px;margin:6px 0">`:''}
+    <label>توضیحات<textarea name="description" rows="2">${esc(c.description||'')}</textarea></label>
+    <div class="g2"><label><input type="checkbox" name="is_active" ${c.is_active!==false?'checked':''}> فعال</label>
+    <label><input type="checkbox" name="show_on_homepage" ${c.show_on_homepage?'checked':''}> نمایش در صفحه اصلی</label></div>
+    <button class="bt g" style="margin-top:10px">${c.id?'ذخیره':'افزودن'}</button>
+  </form>`;
+  $('campF').onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.target);fd.set('is_active',e.target.is_active.checked?'1':'0');fd.set('show_on_homepage',e.target.show_on_homepage.checked?'1':'0');try{await api('/campaigns'+(c.id?'/'+c.id:''),{method:c.id?'PUT':'POST',body:fd});toast('ذخیره شد');campaign()}catch(_){}};
+}
+
+// ---------- مدیریت بسته‌های اقتصادی ----------
+let BUND=[];
+async function bundle(){
+  BUND=await api('/bundles');
+  $('m').innerHTML=`<div id="bf"></div><div class="box"><h3>فهرست بسته‌ها</h3><div class="tbl"><table><thead><tr><th>عنوان</th><th>قیمت بسته</th><th>قیمت اصلی</th><th>تخفیف</th><th>اقلام</th><th>وضعیت</th><th></th></tr></thead><tbody id="bt"></tbody></table></div></div>`;
+  const draw=()=>{
+    $('bt').innerHTML=BUND.length?BUND.map(b=>{const off=b.original_price&&b.original_price>b.bundle_price?Math.round((1-b.bundle_price/b.original_price)*100):0;
+      return `<tr><td><b>${esc(b.title)}</b></td><td>${fa(b.bundle_price)}</td><td><small style="text-decoration:line-through">${fa(b.original_price||0)}</small></td><td>${off?`<span class="pill green">${fa(off)}٪</span>`:'—'}</td><td><small>${(b.items||[]).map(i=>`${esc(i.name)} ×${i.qty}`).join('، ')}</small></td><td>${b.is_active?'<span class="pill green">فعال</span>':'<span class="pill gray">غیرفعال</span>'}</td><td><button class="bt" data-e="${b.id}">ویرایش</button> <button class="bt r" data-x="${b.id}">حذف</button></td></tr>`}).join(''):'<tr><td colspan="7" style="text-align:center;padding:20px">بسته‌ای نیست</td></tr>';
+    document.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>bundleForm(BUND.find(x=>x.id==b.dataset.e)));
+    document.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{if(confirm('حذف شود؟')){await api('/bundles/'+b.dataset.x,{method:'DELETE'});toast('حذف شد');bundle()}});
+  };
+  draw(); bundleForm();
+}
+function bundleForm(b){
+  b=b||{};
+  const itemsStr=(b.items||[]).map(i=>`${i.product_id}:${i.qty}`).join(',');
+  $('bf').innerHTML=`<form class="box" id="bF"><h3>${b.id?'ویرایش بسته':'افزودن بسته'}</h3>
+    <label>عنوان *<input name="title" required value="${esc(b.title||'')}"></label>
+    <div class="g2">
+      <label>قیمت بسته (تومان) *<input name="bundle_price" type="number" min="1" required value="${b.bundle_price||''}"></label>
+      <label>ترتیب<input name="sort_order" type="number" min="0" value="${b.sort_order||0}"></label>
+    </div>
+    <label>اقلام بسته — فرمت: ID:تعداد, ID:تعداد (مثلاً 1:2, 3:1)<input name="items" required value="${esc(itemsStr)}" placeholder="1:2, 3:1"></label>
+    <label>تصویر (اختیاری)<input name="image" type="file" accept="image/jpeg,image/png,image/webp"></label>
+    <label>توضیحات<textarea name="description" rows="2">${esc(b.description||'')}</textarea></label>
+    <label><input type="checkbox" name="is_active" ${b.is_active!==false?'checked':''}> فعال</label>
+    <button class="bt g" style="margin-top:10px">${b.id?'ذخیره':'افزودن'}</button>
+  </form>`;
+  $('bF').onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.target);fd.set('is_active',e.target.is_active.checked?'1':'0');try{await api('/bundles'+(b.id?'/'+b.id:''),{method:b.id?'PUT':'POST',body:fd});toast('ذخیره شد');bundle()}catch(_){}};
+}
+
+// ---------- گزارش‌ها ----------
+async function reports(){
+  $('m').innerHTML=`<div class="box"><h3>داشبورد فروش</h3>
+    <div class="search-bar"><label>بازه: <select id="repDays"><option value="1">امروز</option><option value="7">۷ روز</option><option value="30" selected>۳۰ روز</option><option value="90">۹۰ روز</option><option value="365">یک سال</option></select></label></div>
+    <div id="dashCards" class="cards"><p class="note">در حال بارگذاری…</p></div>
+  </div>
+  <div class="box"><h3>پرفروش‌ترین محصولات</h3>
+    <div class="search-bar"><select id="bestSort"><option value="qty">بر اساس تعداد</option><option value="revenue">بر اساس درآمد</option></select></div>
+    <div class="tbl"><table><thead><tr><th>محصول</th><th>تعداد فروش</th><th>درآمد</th><th>موجودی</th></tr></thead><tbody id="bestT"></tbody></table></div>
+  </div>
+  <div class="box"><h3>محصولات کم‌موجود</h3><div class="tbl"><table><thead><tr><th>محصول</th><th>موجودی</th><th>حد هشدار</th></tr></thead><tbody id="lowT"></tbody></table></div></div>
+  <div class="box"><h3>آمار بنرها</h3><div class="tbl"><table><thead><tr><th>بنر</th><th>نمایش</th><th>کلیک</th><th>CTR</th></tr></thead><tbody id="bStatsT"></tbody></table></div></div>`;
+  const loadDash=async()=>{
+    const days=$('repDays').value;
+    const d=await api('/reports/dashboard?days='+days);
+    $('dashCards').innerHTML=`<div><span class="lbl">فروش امروز</span><b>${fa(d.revenue_today)}</b></div>
+      <div><span class="lbl">فروش هفته</span><b>${fa(d.revenue_week)}</b></div>
+      <div><span class="lbl">فروش ماه</span><b>${fa(d.revenue_month)}</b></div>
+      <div><span class="lbl">فروش کل</span><b>${fa(d.revenue_total)}</b></div>
+      <div><span class="lbl">سفارش‌ها (${days} روز)</span><b>${fa(d.orders_count)}</b></div>
+      <div><span class="lbl">میانگین سفارش</span><b>${fa(d.avg_order)}</b></div>
+      <div><span class="lbl">مشتریان جدید</span><b>${fa(d.new_customers)}</b></div>
+      <div><span class="lbl">مجموع تخفیف</span><b>${fa(d.total_discount)}</b></div>
+      <div><span class="lbl">محصولات فعال</span><b>${fa(d.active_products)}</b></div>
+      <div><span class="lbl">ناموجود</span><b>${fa(d.out_of_stock)}</b></div>
+      <div><span class="lbl">کم‌موجود</span><b>${fa(d.low_stock)}</b></div>
+      <div><span class="lbl">کل نظرات</span><b>${fa(d.total_reviews)}</b></div>`;
+  };
+  const loadBest=async()=>{
+    const days=$('repDays').value; const sort=$('bestSort').value;
+    const r=await api('/reports/best-sellers?days='+days+'&sort='+sort);
+    $('bestT').innerHTML=r.length?r.map(p=>`<tr><td><b>${esc(p.name)}</b></td><td>${fa(p.sold_qty)}</td><td>${fa(p.sold_revenue)}</td><td>${p.stock}</td></tr>`).join(''):'<tr><td colspan="4" style="text-align:center">داده‌ای نیست</td></tr>';
+  };
+  const loadLow=async()=>{
+    const r=await api('/reports/low-stock');
+    $('lowT').innerHTML=r.length?r.map(p=>`<tr><td><b>${esc(p.name)}</b></td><td>${p.stock===0?'<span class="pill red">ناموجود</span>':`<span class="pill gray">${p.stock}</span>`}</td><td>${p.stock_threshold}</td></tr>`).join(''):'<tr><td colspan="3" style="text-align:center">همه محصولات موجود هستند</td></tr>';
+  };
+  const loadBStats=async()=>{
+    const r=await api('/banners-stats?days='+$('repDays').value);
+    $('bStatsT').innerHTML=r.length?r.map(b=>`<tr><td>${esc(b.title)}</td><td>${fa(b.views)}</td><td>${fa(b.clicks)}</td><td>${b.ctr}٪</td></tr>`).join(''):'<tr><td colspan="4" style="text-align:center">بنری نیست</td></tr>';
+  };
+  $('repDays').onchange=()=>{loadDash();loadBest();loadBStats();};
+  $('bestSort').onchange=loadBest;
+  loadDash(); loadBest(); loadLow(); loadBStats();
+}
+
+// ---------- مدیریت مشتریان ----------
+async function customers(){
+  const list=await api('/customers');
+  $('m').innerHTML=`<div class="box"><h3>مشتریان</h3><div class="tbl"><table><thead><tr><th>نام</th><th>موبایل</th><th>سفارش‌ها</th><th>مجموع خرید</th><th>امتیاز</th><th>آخرین سفارش</th><th></th></tr></thead><tbody>${list.map(c=>`<tr><td><b>${esc(c.name)}</b><br><small>${esc(c.email||'')}</small></td><td dir="ltr">${esc(c.mobile||'—')}</td><td>${fa(c.orders_count)}</td><td>${fa(c.total_spent)}</td><td>${c.points_balance||0}</td><td><small>${c.last_order_at?new Date(c.last_order_at).toLocaleDateString('fa-IR'):'—'}</small></td><td><button class="bt" data-c="${c.id}">جزئیات</button></td></tr>`).join('')||'<tr><td colspan="7" style="text-align:center;padding:20px">مشتری نیست</td></tr>'}</tbody></table></div></div><div id="cd"></div>`;
+  document.querySelectorAll('[data-c]').forEach(b=>b.onclick=async()=>{
+    const c=await api('/customers/'+b.dataset.c);
+    $('cd').innerHTML=`<div class="box"><h3>${esc(c.name)}</h3>
+      <p>موبایل: <b dir="ltr">${esc(c.mobile||'—')}</b> | ایمیل: ${esc(c.email||'—')}</p>
+      <p>امتیاز فعلی: <b>${c.points_balance||0}</b></p>
+      <h4>سفارش‌ها (${(c.orders||[]).length})</h4>
+      <div class="tbl"><table><thead><tr><th>شماره</th><th>مبلغ</th><th>وضعیت</th><th>تاریخ</th></tr></thead><tbody>${(c.orders||[]).map(o=>`<tr><td dir="ltr">${esc(o.order_number)}</td><td>${fa(o.total)}</td><td><span class="pill ${o.status==='delivered'?'green':o.status==='cancelled'?'red':'gray'}">${ST[o.status]||o.status}</span></td><td><small>${dt(o.created_at)}</small></td></tr>`).join('')}</tbody></table></div>
+      <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+      <h4>مدیریت امتیاز</h4>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input id="ptsAmount" type="number" placeholder="مقدار (مثبت/منفی)" style="width:200px">
+        <input id="ptsReason" placeholder="دلیل" style="width:200px">
+        <button class="bt g" id="ptsSet">اعمال</button>
+      </div></div>`;
+    if($('ptsSet')) $('ptsSet').onclick=async()=>{
+      const amount=Number($('ptsAmount').value); const reason=$('ptsReason').value.trim();
+      if(!Number.isFinite(amount)||amount===0){toast('مقدار نامعتبر');return}
+      await api('/customers/'+b.dataset.c+'/points',{method:'POST',json:{amount,reason}});
+      toast('امتیاز اعمال شد'); customers();
+    };
+    $('cd').scrollIntoView();
+  });
+}
+
+// ---------- مدیریت روش‌های ارسال ----------
+async function shipping(){
+  const list=await api('/shipping-methods');
+  $('m').innerHTML=`<div class="box"><h3>روش‌های ارسال</h3>
+    <form id="shipF" style="margin-bottom:14px">
+      <div class="g2">
+        <label>نام *<input name="name" required placeholder="مثلاً ارسال پستی"></label>
+        <label>هزینه پایه (تومان)<input name="base_cost" type="number" min="0" value="150000"></label>
+      </div>
+      <div class="g2">
+        <label>آستانه ارسال رایگان (خالی = هیچ‌وقت)<input name="free_shipping_threshold" type="number" placeholder="مثلاً 500000"></label>
+        <label>ترتیب<input name="sort_order" type="number" min="0" value="1"></label>
+      </div>
+      <label>توضیحات<input name="description" placeholder="توضیحات روش ارسال"></label>
+      <label><input type="checkbox" name="is_active" checked> فعال</label>
+      <button class="bt g">افزودن</button>
+    </form>
+    <div class="tbl"><table><thead><tr><th>نام</th><th>هزینه</th><th>ارسال رایگان از</th><th>وضعیت</th><th></th></tr></thead><tbody id="shipT"></tbody></table></div>
+  </div>`;
+  const draw=()=>{
+    $('shipT').innerHTML=list.length?list.map(s=>`<tr><td><b>${esc(s.name)}</b></td><td>${fa(s.base_cost)}</td><td>${s.free_shipping_threshold?fa(s.free_shipping_threshold):'—'}</td><td>${s.is_active?'<span class="pill green">فعال</span>':'<span class="pill gray">غیرفعال</span>'}</td><td><button class="bt r" data-sx="${s.id}">حذف</button></td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center">روشی نیست</td></tr>';
+    document.querySelectorAll('[data-sx]').forEach(b=>b.onclick=async()=>{await api('/shipping-methods/'+b.dataset.sx,{method:'DELETE'});toast('حذف شد');shipping()});
+  };
+  draw();
+  $('shipF').onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.target);const o=Object.fromEntries(fd);o.is_active=e.target.is_active.checked?'1':'0';await api('/shipping-methods',{method:'POST',json:o});toast('افزوده شد');shipping()};
+}
+
+async function set(){const s=await api('/settings'),F={shop_name:'نام فروشگاه',phone:'شماره تماس',eitaa_link:'لینک ایتا (https://…)',card_number:'شماره کارت',card_owner:'نام صاحب کارت',shipping_fee:'هزینه ارسال (تومان)',min_order:'حداقل مبلغ سفارش',footer_text:'متن فوتر',about_text:'متن معرفی',points_enabled:'باشگاه مشتریان (1=فعال)',points_per_toman:'هر N تومان = ۱ امتیاز',points_min_redeem:'حداقل امتیاز قابل استفاده',points_value_toman:'ارزش هر امتیاز (تومان)'};
+ $('m').innerHTML=`<form class="box" id="sf2"><h3>تنظیمات فروشگاه</h3>${Object.entries(F).map(([k,n])=>`<label>${n}<input name="${k}" value="${esc(s[k])}"></label>`).join('')}<label style="margin-top:10px"><input type="checkbox" name="shop_active" ${s.shop_active=='1'?'checked':''}> فروشگاه فعال باشد</label><button class="bt g" style="margin-top:12px">ذخیره</button></form>`;
+ $('sf2').onsubmit=async e=>{e.preventDefault();const o=Object.fromEntries(new FormData(e.target));o.shop_active=e.target.shop_active.checked?'1':'0';await api('/settings',{method:'PUT',json:o});toast('تنظیمات ذخیره شد')}}
+T?shell('dash'):login();
+</script>
+</body>
+</html>
