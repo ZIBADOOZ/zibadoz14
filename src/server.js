@@ -91,7 +91,9 @@ function isLocked(username) {
   const l = adminLocks.get(username);
   if (!l) return false;
   if (l.until && Date.now() < l.until) return true;
-  adminLocks.delete(username);
+  // فقط قفل «منقضی‌شده» پاک می‌شود؛ شمارنده شکست‌های جاری باید بماند
+  // تا پس از ۵ شکست متوالی، قفل ۳۰ دقیقه‌ای واقعاً فعال شود.
+  if (l.until) adminLocks.delete(username);
   return false;
 }
 function registerFail(username) {
@@ -1295,16 +1297,67 @@ app.post('/api/orders', orderLimit, customerAuth, A(async (q, s) => {
       if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) throw new E('اعتبار این کد تخفیف به پایان رسیده است');
       if (coupon.usage_limit !== null && coupon.used_count >= coupon.usage_limit) throw new E('ظرفیت استفاده از این کد تخفیف تمام شده است');
       if (sub < Number(coupon.min_order || 0)) throw new E('حداقل مبلغ خرید برای این کد تخفیف رعایت نشده است');
+
+      // ---------- اعمال فیلدهای پیشرفته کوپن (فاز ۳) سمت سرور ----------
+      // محدودیت دسته‌بندی/محصولات: پایه تخفیف فقط بخش واجد شرایط سبد است
+      const couponProductIds = (() => {
+        const raw = coupon.product_ids;
+        try {
+          const arr = typeof raw === 'string' ? JSON.parse(raw || '[]') : (Array.isArray(raw) ? raw : []);
+          return arr.map(Number).filter(n => Number.isSafeInteger(n) && n > 0);
+        } catch { return []; }
+      })();
+      const scoped = (coupon.category_id != null) || couponProductIds.length > 0;
+      let eligibleSub = sub;
+      let eligibleQty = rows.reduce((n, r) => n + r.qty, 0);
+      if (scoped) {
+        const eligible = rows.filter(r =>
+          (coupon.category_id != null && Number(r.p.category_id) === Number(coupon.category_id)) ||
+          couponProductIds.includes(Number(r.p.id))
+        );
+        if (!eligible.length) throw new E('این کد تخفیف برای محصولات سبد شما اعمال نمی‌شود');
+        eligibleSub = eligible.reduce((n, r) => n + r.unit * r.qty, 0);
+        eligibleQty = eligible.reduce((n, r) => n + r.qty, 0);
+      }
+
+      // حداقل تعداد کالای واجد شرایط
+      if (coupon.min_qty && eligibleQty < Number(coupon.min_qty)) {
+        throw new E('حداقل تعداد موردنیاز برای این کد تخفیف رعایت نشده است');
+      }
+
+      // فقط اولین سفارش مشتری (بر اساس حساب کاربری یا موبایل)
+      if (coupon.first_order_only) {
+        const prior = (await cl.query(
+          'select 1 from coupon_usage where coupon_id=$1 and (account_id=$2 or customer_mobile=$3) limit 1',
+          [coupon.id, q.customerAccount.id, mobile]
+        )).rowCount;
+        if (prior) throw new E('این کد تخفیف فقط برای اولین سفارش است');
+      }
+
+      // سهمیه استفاده هر مشتری
+      if (coupon.per_customer_limit) {
+        const used = (await cl.query(
+          'select count(distinct order_id)::int n from coupon_usage where coupon_id=$1 and (account_id=$2 or customer_mobile=$3)',
+          [coupon.id, q.customerAccount.id, mobile]
+        )).rows[0].n;
+        if (used >= Number(coupon.per_customer_limit)) throw new E('سهمیه استفاده شما از این کد تخفیف تمام شده است');
+      }
+
+      // محاسبه تخفیف روی پایه واجد شرایط + سقف max_discount
       discount = coupon.discount_type === 'percent'
-        ? Math.floor(sub * Math.min(100, Number(coupon.discount_value)) / 100)
-        : Math.min(sub, Number(coupon.discount_value));
+        ? Math.floor(eligibleSub * Math.min(100, Number(coupon.discount_value)) / 100)
+        : Math.min(eligibleSub, Number(coupon.discount_value));
+      if (coupon.max_discount != null && Number(coupon.max_discount) > 0) {
+        discount = Math.min(discount, Number(coupon.max_discount));
+      }
+      discount = Math.min(discount, sub);
     }
-    const total = Math.max(0, sub + ship - discount);
+    let total = Math.max(0, sub + ship - discount);
 
     let accountId = null;
     if (q.customerAccount) {
       const account = (await cl.query(
-        'select id,mobile from customer_accounts where id=$1 for update',
+        'select id,mobile,points_balance from customer_accounts where id=$1 for update',
         [q.customerAccount.id]
       )).rows[0];
       if (!account) throw new E('حساب کاربری معتبر نیست', 401);
@@ -1315,6 +1368,31 @@ app.post('/api/orders', orderLimit, customerAuth, A(async (q, s) => {
         await cl.query('update customer_accounts set mobile=$1 where id=$2', [mobile, account.id]);
       }
       accountId = account.id;
+    }
+
+    // ---------- مصرف امتیاز باشگاه مشتریان (فاز ۶) — اتمیک و سمت سرور ----------
+    let pointsUsed = 0, pointsValue = 0;
+    const reqPoints = Math.floor(Number((q.body || {}).spend_points) || 0);
+    if (reqPoints > 0) {
+      if (st.points_enabled !== '1') throw new E('امکان استفاده از امتیاز در حال حاضر فعال نیست');
+      const perPoint = Math.max(0, parseInt(st.points_value_toman) || 0);
+      if (perPoint <= 0) throw new E('امکان استفاده از امتیاز در حال حاضر فعال نیست');
+      const minRedeem = Math.max(1, parseInt(st.points_min_redeem) || 100);
+      if (reqPoints < minRedeem) throw new E('حداقل امتیاز قابل استفاده ' + minRedeem + ' امتیاز است');
+      const remainingBefore = Math.max(0, sub + ship - discount);
+      const maxUseful = Math.floor(remainingBefore / perPoint);
+      if (reqPoints > maxUseful) {
+        throw new E('امتیاز واردشده بیش از مبلغ قابل پرداخت است (حداکثر ' + maxUseful + ' امتیاز)');
+      }
+      // کسر اتمیک: شرط points_balance>=$1 هم‌زمانی چند درخواست را می‌بندد
+      const upd = await cl.query(
+        'update customer_accounts set points_balance=points_balance-$1 where id=$2 and points_balance>=$1 returning points_balance',
+        [reqPoints, accountId]
+      );
+      if (!upd.rowCount) throw new E('موجودی امتیاز شما کافی نیست');
+      pointsUsed = reqPoints;
+      pointsValue = reqPoints * perPoint;
+      total = Math.max(0, total - pointsValue);
     }
 
     const cu = (await cl.query(
@@ -1333,9 +1411,17 @@ app.post('/api/orders', orderLimit, customerAuth, A(async (q, s) => {
     const num = await generateOrderNumber();
 
     const oid = (await cl.query(
-      'insert into orders(order_number,customer_id,subtotal,shipping,discount,coupon_code,total,notes) values($1,$2,$3,$4,$5,$6,$7,$8) returning id',
-      [num, cu, sub, ship, discount, couponCode || null, total, String(c.notes || '').slice(0, 500)]
+      'insert into orders(order_number,customer_id,subtotal,shipping,discount,coupon_code,total,notes,shipping_method_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9) returning id',
+      [num, cu, sub, ship, discount, couponCode || null, total, String(c.notes || '').slice(0, 500), shipMethod ? shipMethod.id : null]
     )).rows[0].id;
+
+    // ثبت تراکنش مصرف امتیاز متصل به سفارش
+    if (pointsUsed > 0) {
+      await cl.query(
+        'insert into point_transactions(account_id, amount, type, reason, order_id) values($1,$2,$3,$4,$5)',
+        [accountId, -pointsUsed, 'spend', 'استفاده از امتیاز در سفارش ' + num, oid]
+      );
+    }
 
     // ثبت جداگانه هر ترکیب رنگ و سایز
     for (const r of rows) {
@@ -1377,6 +1463,10 @@ app.post('/api/orders', orderLimit, customerAuth, A(async (q, s) => {
       shipping: ship,
       discount,
       coupon_code: couponCode || null,
+      points_used: pointsUsed,
+      points_value: pointsValue,
+      shipping_method_id: shipMethod ? shipMethod.id : null,
+      shipping_method_name: shipMethod ? shipMethod.name : null,
       payment: payInfo(st)
     });
 
@@ -1410,6 +1500,11 @@ app.post('/api/orders/track', orderLimit, A(async (q, s) => {
     [o.id]
   )).rows;
 
+  const pts = (await db.query(
+    "select coalesce(sum(-amount),0)::int used from point_transactions where order_id=$1 and type='spend'",
+    [o.id]
+  )).rows[0].used;
+
   const r = {
     order_number: o.order_number,
     status: o.status,
@@ -1417,7 +1512,8 @@ app.post('/api/orders/track', orderLimit, A(async (q, s) => {
     tracking_code: o.tracking_code,
     created_at: o.created_at,
     items,
-    history
+    history,
+    points_used: pts || 0
   };
 
   if (['pending_payment', 'payment_rejected'].includes(o.status)) {
@@ -1478,11 +1574,15 @@ app.post('/api/orders/:num/receipt', orderLimit, upload.single('receipt'), A(asy
 }));
 
 // ---------- مدیر ----------
+// میدل‌ور احراز هویت مدیر — نوع توکن (type='admin') به‌صورت صریح بررسی می‌شود
+// تا توکن مشتری (که issuer/audience یکسان دارد) هرگز به APIهای مدیریتی راه نیابد.
 const auth = (q, s, n) => {
   try {
     const h = String(q.headers.authorization || '');
     if (!/^Bearer\s+/i.test(h)) throw new Error('no token');
-    q.admin = jwt.verify(h.replace(/^Bearer\s+/i, ''), SECRET, { issuer: JWT_ISSUER, audience: JWT_AUDIENCE });
+    const payload = jwt.verify(h.replace(/^Bearer\s+/i, ''), SECRET, { issuer: JWT_ISSUER, audience: JWT_AUDIENCE });
+    if (payload.type !== 'admin') throw new Error('not an admin token');
+    q.admin = payload;
     n();
   } catch {
     s.status(401).json({ error: 'دسترسی غیرمجاز' });
@@ -1921,7 +2021,11 @@ ad.get('/orders/:id', A(async (q, s) => {
   const id = +q.params.id;
 
   const o = (await db.query(
-    'select o.*,c.name,c.mobile,c.province,c.city,c.address,c.postal_code from orders o join customers c on c.id=o.customer_id where o.id=$1',
+    `select o.*,c.name,c.mobile,c.province,c.city,c.address,c.postal_code,sm.name shipping_method_name
+     from orders o
+     join customers c on c.id=o.customer_id
+     left join shipping_methods sm on sm.id=o.shipping_method_id
+     where o.id=$1`,
     [id]
   )).rows[0];
 
@@ -2224,11 +2328,13 @@ ad.delete('/coupons/:id', A(async (q,s)=>{await db.query('delete from coupons wh
 
 // ---------- مدیریت نظرات (فاز ۲) ----------
 // نظرات اکنون انتشار فوری دارند (status='approved' هنگام ثبت).
-// مدیر می‌تواند نظرات را فقط ببیند و در صورت نیاز حذف کند (مثلاً اسپم).
-// فرایند تأیید/رد حذف شده است.
+// مدیر می‌تواند نظرات را ببیند، با PATCH وضعیت را تغییر دهد (approved/rejected/pending)
+// و در صورت نیاز (اسپم/توهین) حذف کند. نظرات با وضعیت غیر approved در نمایش عمومی نمی‌آیند.
 
-// GET /api/admin/reviews — فهرست همه نظرات
+// GET /api/admin/reviews — فهرست همه نظرات (با فیلتر اختیاری ?status=)
 ad.get('/reviews', A(async (q, s) => {
+  const status = String(q.query.status || '').trim();
+  const valid = ['pending', 'approved', 'rejected'].includes(status);
   const r = await db.query(
     `select r.id, r.title, r.body, r.rating, r.status, r.verified_buyer,
             r.created_at, r.updated_at,
@@ -2237,10 +2343,36 @@ ad.get('/reviews', A(async (q, s) => {
      from product_reviews r
      join products p on p.id=r.product_id
      join customer_accounts ca on ca.id=r.account_id
+     ${valid ? 'where r.status=$1' : ''}
      order by r.created_at desc
-     limit 200`
+     limit 200`,
+    valid ? [status] : []
   );
   s.json(r.rows);
+}));
+
+// PATCH /api/admin/reviews/:id — تغییر وضعیت نظر (تأیید/رد/انتظار) با دلیل رد
+// طراحی پایه «انتشار فوری» است؛ این قابلیت به مدیر اجازه می‌دهد بعداً یک نظر را
+// پنهان (rejected) یا بازگرداند (approved) بدون حذف داده مشتری.
+ad.patch('/reviews/:id', A(async (q, s) => {
+  const id = +q.params.id;
+  if (!Number.isSafeInteger(id) || id <= 0) throw new E('شناسه نظر نامعتبر است');
+  const b = q.body || {};
+  const status = String(b.status || '');
+  if (!['approved', 'rejected', 'pending'].includes(status)) {
+    throw new E('وضعیت نظر باید یکی از مقادیر approved، rejected یا pending باشد');
+  }
+  const reason = String(b.reject_reason || '').trim().slice(0, 300);
+  const r = await db.query(
+    `update product_reviews
+     set status=$1, reject_reason=$2, updated_at=now()
+     where id=$3
+     returning id,status`,
+    [status, status === 'rejected' ? (reason || 'نظر پس از بررسی پنهان شد') : null, id]
+  );
+  if (!r.rowCount) throw new E('نظر پیدا نشد', 404);
+  log(q, 'review-status', String(id) + ' → ' + status);
+  s.json({ ok: true, status: r.rows[0].status });
 }));
 
 // DELETE /api/admin/reviews/:id — حذف نظر (فقط برای اسپم یا توهین)

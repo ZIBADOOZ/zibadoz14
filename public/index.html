@@ -263,7 +263,7 @@ footer .fcol span,footer .fcol a{display:inline-flex;align-items:center;gap:6px}
 <span>زیبادوز<small>ZIBADOZ</small></span>
 </a>
 <nav id="nav">
-<a href="/" data-route="/">خانه</a>
+<a href="#" onclick="location.href=pagePath('/');return false" data-route="/">خانه</a>
 <a href="#" onclick="location.href=pagePath('/products');return false" data-route="/products">محصولات</a>
 <a href="#" onclick="location.href=pagePath('/track');return false" data-route="/track">پیگیری سفارش</a>
 <a href="#" onclick="location.href=pagePath('/about');return false" data-route="/about">درباره ما</a>
@@ -361,24 +361,55 @@ function stockBadge(stock){
   return `<span class="stock out"><span class="dot"></span>ناموجود</span>`;
 }
 
-// ---------- GitHub Pages path handling ----------
+// ---------- GitHub Pages path handling (hash routing) ----------
+// سایت روی /zibadoz14/ منتشر می‌شود؛ مسیرهای داخلی به‌صورت hash نگه داشته می‌شوند
+// تا Refresh و لینک مستقیم هرگز به 404 گیت‌هاب Pages نخورد.
+// سازگاری: مسیرهای قدیمی (/products، /product/x و …) و اجرا از Backend محلی
+// هم همچنان شناسایی می‌شوند (fallback به pathname).
 const BASE_PATH = (function(){
   const path = window.location.pathname;
-  const match = path.match(/^(\/[^\/]+\/[^\/]+)\/?/);
-  if (match && match[1] !== '/product' && !path.includes('/product/')) return match[1];
-  const baseMatch = path.match(/^(\/[^\/]+\/[^\/]+)\//);
-  if (baseMatch) return baseMatch[1];
-  return '';
+  if (!path || path === '/') return '';
+  const segs = path.replace(/^\/+|\/+$/g, '').split('/');
+  const isRoute = s => ['products', 'about', 'track', 'product'].includes(s);
+  // اجرا از Backend محلی روی مسیرهای شناخته‌شده → بدون زیرمسیر
+  if (isRoute(segs[0])) return '';
+  // GitHub Pages پروژه‌ای: /zibadoz14/ → تک‌سگمنت
+  if (segs.length === 1) return '/' + segs[0];
+  // مسیر مستقیم زیر زیرمسیر: /zibadoz14/products یا /zibadoz14/product/slug
+  if (isRoute(segs[1])) return '/' + segs[0];
+  // hosting دومسطحی مثل /a/b/
+  return '/' + segs.slice(0, 2).join('/');
 })();
-function pagePath(p) { return BASE_PATH + p; }
-
+// آدرس داخلی: BASE_PATH + /#/مسیر (+پارامتر اختیاری) — تغییر hash باعث reload نمی‌شود
+function pagePath(p, q) { return BASE_PATH + '/#' + p + (q || ''); }
+// مسیر منطقی از hash؛ در نبود hash از pathname (لینک‌های قدیمی/Backend)
+function logicalPath(){
+  const h = location.hash || '';
+  if (h.startsWith('#/')) return h.slice(1).replace(/\/+$/, '') || '/';
+  const p = location.pathname.replace(/\/+$/, '') || '/';
+  return (BASE_PATH && p.startsWith(BASE_PATH)) ? (p.substring(BASE_PATH.length) || '/') : p;
+}
 function routeOf(){
-  const p=location.pathname.replace(/\/+$/,'')||'/';
-  if(p.startsWith('/product/')) return 'product';
-  if(p==='/products') return 'products';
-  if(p==='/about') return 'about';
-  if(p==='/track') return 'track';
+  const before = logicalPath().split('?')[0];
+  if (before.startsWith('/product/')) return 'product';
+  if (before === '/products') return 'products';
+  if (before === '/about') return 'about';
+  if (before === '/track') return 'track';
   return 'home';
+}
+// پارامترهای کوئری مسیر: از hash اگر داخل آن است، وگرنه از search واقعی
+function routeQuery(){
+  const h = location.hash || '';
+  const src = h.includes('?') ? h.slice(h.indexOf('?') + 1) : location.search.replace(/^\?/, '');
+  return new URLSearchParams(src);
+}
+// یکسان‌سازی URL: مسیرهای قدیمی بدون hash به شکل hash تبدیل می‌شوند (بدون reload)
+function normalizeRouteUrl(){
+  if (location.hash.startsWith('#/')) return;
+  const lp = logicalPath();
+  if (lp !== '/' && lp !== '') {
+    history.replaceState(null, '', BASE_PATH + '/#' + lp);
+  }
 }
 function showPage(name){
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
@@ -589,7 +620,7 @@ async function openProduct(slug){
       : '';
 
     // اشتراک‌گذاری
-    const shareUrl = location.origin + (BASE_PATH||'') + '/product/' + encodeURIComponent(p.slug);
+    const shareUrl = location.origin + BASE_PATH + '/#/product/' + encodeURIComponent(p.slug);
     const shareHtml = `<div class="share-row" style="margin-top:10px">
       <button class="share-btn" id="shareCopy" title="کپی لینک">🔗 کپی لینک</button>
       <button class="share-btn" id="shareWeb" title="اشتراک‌گذاری">📤 اشتراک‌گذاری</button>
@@ -973,9 +1004,9 @@ function bindQuestionForm(slug){
   };
 }
 $('productModal').onclick=e=>{if(e.target.id==='productModal'){if(document.body.classList.contains('product-page'))location.href=pagePath('/');else $('productModal').classList.remove('open')}};
-let checkoutCustomer={}, checkoutCoupon='', checkoutDiscount=0, checkoutSubtotal=0, checkoutShipping=0, checkoutStep=1, checkoutShippingMethods=[], checkoutShippingMethodId=null;
+let checkoutCustomer={}, checkoutCoupon='', checkoutDiscount=0, checkoutSubtotal=0, checkoutShipping=0, checkoutStep=1, checkoutShippingMethods=[], checkoutShippingMethodId=null, checkoutSpendPoints=0;
 function checkoutItems(){return Object.entries(cart).map(([key,qty])=>{const v=cartParts(key);return {product_id:v.id,qty,color:v.color,size:v.size}})}
-function checkoutSummary(){return `<div style="border-top:1px solid var(--line);padding-top:10px;margin-top:10px"><div>جمع محصولات: <b>${fa(checkoutSubtotal)}</b></div><div>هزینه ارسال: <b>${fa(checkoutShipping)}</b></div><div>تخفیف: <b>${fa(checkoutDiscount)}</b></div><hr><div style="font-size:18px">مبلغ نهایی: <b>${fa(checkoutSubtotal+checkoutShipping-checkoutDiscount)}</b></div></div>`}
+function checkoutSummary(){const ptsVal=checkoutSpendPoints*(Number(storeSettings.points_value_toman)||0);return `<div style="border-top:1px solid var(--line);padding-top:10px;margin-top:10px"><div>جمع محصولات: <b>${fa(checkoutSubtotal)}</b></div><div>هزینه ارسال: <b>${fa(checkoutShipping)}</b></div>${checkoutDiscount?`<div>تخفیف کوپن: <b>${fa(checkoutDiscount)}</b></div>`:''}${checkoutSpendPoints>0?`<div>تخفیف امتیاز (${fa(checkoutSpendPoints)} امتیاز): <b>${fa(ptsVal)}</b></div>`:''}<hr><div style="font-size:18px">مبلغ نهایی: <b>${fa(Math.max(0,checkoutSubtotal+checkoutShipping-checkoutDiscount-ptsVal))}</b></div></div>`}
 function renderCheckout(){
  const title=['','اطلاعات گیرنده','روش ارسال','کد تخفیف','بررسی نهایی'][checkoutStep];
  let body='';
@@ -996,11 +1027,11 @@ function renderCheckout(){
      }).join('')}<button class="btn" id="nextStep">ادامه</button><button class="chip" id="prevStep">بازگشت</button>`;
    }
  }
- if(checkoutStep===3) body=`<h3>۳. کد تخفیف</h3><div style="display:flex;gap:8px"><input id="couponInput" placeholder="کد تخفیف" value="${esc(checkoutCoupon)}" style="flex:1"><button class="btn" id="applyCoupon">اعمال</button></div><p id="couponMessage" class="note">${checkoutDiscount?'کد تخفیف اعمال شده است.':'اگر کد تخفیف دارید وارد کنید؛ در غیر این صورت ادامه دهید.'}</p>${checkoutSummary()}<button class="btn" id="nextStep">ادامه</button><button class="chip" id="prevStep">بازگشت</button>`;
+ if(checkoutStep===3) body=`<h3>۳. کد تخفیف و امتیاز</h3><div style="display:flex;gap:8px"><input id="couponInput" placeholder="کد تخفیف" value="${esc(checkoutCoupon)}" style="flex:1"><button class="btn" id="applyCoupon">اعمال</button></div><p id="couponMessage" class="note">${checkoutDiscount?'کد تخفیف اعمال شده است.':'اگر کد تخفیف دارید وارد کنید؛ در غیر این صورت ادامه دهید.'}</p><div id="pointsBox"></div>${checkoutSummary()}<button class="btn" id="nextStep">ادامه</button><button class="chip" id="prevStep">بازگشت</button>`;
  if(checkoutStep===4){
    const selShip = checkoutShippingMethods.find(m=>m.id==checkoutShippingMethodId);
    const shipName = selShip ? selShip.name : '—';
-   body=`<h3>۴. بررسی و ثبت سفارش</h3><p><b>گیرنده:</b> ${esc(checkoutCustomer.name)} — ${esc(checkoutCustomer.mobile)}</p><p><b>نشانی:</b> ${esc(checkoutCustomer.province)}، ${esc(checkoutCustomer.city)}، ${esc(checkoutCustomer.address)}</p><p><b>کد پستی:</b> ${esc(checkoutCustomer.postal_code)}</p><p><b>روش ارسال:</b> ${esc(shipName)}</p>${checkoutSummary()}<button class="btn" id="placeOrder">تأیید و ثبت سفارش</button><button class="chip" id="prevStep">بازگشت</button>`;
+   body=`<h3>۴. بررسی و ثبت سفارش</h3><p><b>گیرنده:</b> ${esc(checkoutCustomer.name)} — ${esc(checkoutCustomer.mobile)}</p><p><b>نشانی:</b> ${esc(checkoutCustomer.province)}، ${esc(checkoutCustomer.city)}، ${esc(checkoutCustomer.address)}</p><p><b>کد پستی:</b> ${esc(checkoutCustomer.postal_code)}</p><p><b>روش ارسال:</b> ${esc(shipName)}</p>${checkoutSpendPoints>0?`<p><b>امتیاز مصرفی:</b> ${fa(checkoutSpendPoints)} امتیاز</p>`:''}${checkoutSummary()}<button class="btn" id="placeOrder">تأیید و ثبت سفارش</button><button class="chip" id="prevStep">بازگشت</button>`;
  }
  $('items').innerHTML=`<div><div style="display:flex;justify-content:space-between;gap:8px"><b>${title}</b><small>مرحله ${faNum(checkoutStep)} از ۴</small></div><div style="height:5px;background:#eee;border-radius:8px;margin:8px 0 14px"><div style="height:5px;width:${checkoutStep*25}%;background:var(--leather);border-radius:8px"></div></div>${body}</div>`;
  if(checkoutStep===1){
@@ -1023,7 +1054,33 @@ function renderCheckout(){
    });
  }
  if(checkoutStep===3)$('applyCoupon').onclick=async()=>{const code=$('couponInput').value.trim().toUpperCase();if(!code){checkoutCoupon='';checkoutDiscount=0;renderCheckout();return}try{const r=await fetch(API+'/api/coupons/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,subtotal:checkoutSubtotal})});const d=await r.json();if(!r.ok){$('couponMessage').textContent=d.error||'کد تخفیف معتبر نیست';checkoutCoupon='';checkoutDiscount=0;return}checkoutCoupon=d.code;checkoutDiscount=Number(d.discount);$('couponMessage').textContent='کد تخفیف با موفقیت اعمال شد.';renderCheckout()}catch(_){toast('ارتباط با سرور برقرار نشد')}};
- if(checkoutStep===4)$('placeOrder').onclick=async()=>{const b=$('placeOrder');b.disabled=true;b.textContent='در حال ثبت سفارش…';try{const r=await fetch(API+'/api/orders',{method:'POST',headers:{'Content-Type':'application/json',...(localStorage.getItem('zd_customer_token')?{Authorization:'Bearer '+localStorage.getItem('zd_customer_token')}:{})},body:JSON.stringify({customer:checkoutCustomer,items:checkoutItems(),coupon_code:checkoutCoupon,shipping_method_id:checkoutShippingMethodId})});const d=await r.json();if(!r.ok){toast(d.error||'ثبت سفارش ناموفق بود');b.disabled=false;b.textContent='تأیید و ثبت سفارش';return}cart={};save();draw();done(d,checkoutCustomer.mobile)}catch(_){toast('ارتباط با سرور برقرار نشد');b.disabled=false;b.textContent='تأیید و ثبت سفارش'}};
+// ---------- بارگذاری و اعمال امتیاز باشگاه در مرحله ۳ ----------
+async function loadCheckoutPoints(){
+  const box=$('pointsBox'); if(!box) return;
+  const st=storeSettings||{};
+  if(st.points_enabled!=='1'){ box.innerHTML=''; return; }
+  const perPoint=Number(st.points_value_toman)||0;
+  const minRedeem=Number(st.points_min_redeem)||100;
+  const tk=(function(){try{return localStorage.getItem('zd_customer_token')||''}catch(_){return ''}})();
+  if(!tk){ box.innerHTML='<p class="note">برای استفاده از امتیاز باشگاه، وارد حساب کاربری شوید.</p>'; return; }
+  let balance=0;
+  try{ const r=await fetch(API+'/api/account/points',{headers:{Authorization:'Bearer '+tk}}); if(r.ok){ const d=await r.json(); balance=Number(d.balance)||0; } }catch(_){}
+  if(balance<=0){ box.innerHTML='<p class="note">موجودی امتیاز شما برای استفاده در این سفارش کافی نیست.</p>'; return; }
+  const maxUseful=perPoint>0?Math.floor(Math.max(0,checkoutSubtotal+checkoutShipping-checkoutDiscount)/perPoint):0;
+  const usable=Math.max(0,Math.min(balance,maxUseful));
+  if(usable<minRedeem){ box.innerHTML='<p class="note">موجودی امتیاز شما ('+fa(balance)+' امتیاز) در این سفارش قابل استفاده نیست.</p>'; return; }
+  box.innerHTML=`<div style="background:var(--in-soft);border-radius:var(--r-sm);padding:10px;margin-top:8px"><b>امتیاز باشگاه: ${fa(balance)}</b> <small>(هر امتیاز = ${fa(perPoint)} تومان، حداقل ${fa(minRedeem)} امتیاز)</small><div style="display:flex;gap:8px;margin-top:6px"><input id="spendPoints" type="number" min="${minRedeem}" max="${usable}" placeholder="تعداد امتیاز" style="flex:1"><button class="btn" id="applyPoints">استفاده از امتیاز</button></div><p id="pointsMessage" class="note"></p></div>`;
+  $('applyPoints').onclick=()=>{
+    const n=Math.floor(Number($('spendPoints').value)||0);
+    if(n<minRedeem){ $('pointsMessage').textContent='حداقل '+minRedeem+' امتیاز قابل استفاده است'; return; }
+    if(n>usable){ $('pointsMessage').textContent='حداکثر '+usable+' امتیاز در این سفارش قابل استفاده است'; return; }
+    checkoutSpendPoints=n;
+    renderCheckout();
+    toast('تخفیف امتیازی اعمال شد: '+fa(n*perPoint)+' تومان');
+  };
+}
+if(checkoutStep===3)loadCheckoutPoints();
+ if(checkoutStep===4)$('placeOrder').onclick=async()=>{const b=$('placeOrder');b.disabled=true;b.textContent='در حال ثبت سفارش…';try{const r=await fetch(API+'/api/orders',{method:'POST',headers:{'Content-Type':'application/json',...(localStorage.getItem('zd_customer_token')?{Authorization:'Bearer '+localStorage.getItem('zd_customer_token')}:{})},body:JSON.stringify({customer:checkoutCustomer,items:checkoutItems(),coupon_code:checkoutCoupon,shipping_method_id:checkoutShippingMethodId,spend_points:checkoutSpendPoints||0})});const d=await r.json();if(!r.ok){toast(d.error||'ثبت سفارش ناموفق بود');b.disabled=false;b.textContent='تأیید و ثبت سفارش';return}cart={};save();draw();done(d,checkoutCustomer.mobile)}catch(_){toast('ارتباط با سرور برقرار نشد');b.disabled=false;b.textContent='تأیید و ثبت سفارش'}};
 }
 $('checkout').onclick=async()=>{
   if(!Object.keys(cart).length)return toast('سبد خرید خالی است');
@@ -1032,7 +1089,7 @@ $('checkout').onclick=async()=>{
   await hydrateCart();
   if(!Object.keys(cart).length)return toast('محصول قابل خریدی در سبد باقی نمانده است');
   if(Object.keys(cart).some(key=>!productById.has(cartParts(key).id)))return toast('برخی محصولات سبد قابل تأیید نیستند؛ دوباره جستجو کنید');
-  checkoutCustomer={};checkoutCoupon='';checkoutDiscount=0;checkoutStep=1;
+  checkoutCustomer={};checkoutCoupon='';checkoutDiscount=0;checkoutStep=1;checkoutSpendPoints=0;
   checkoutSubtotal=Object.entries(cart).reduce((sum,[key,qty])=>{const p=productById.get(cartParts(key).id);const part=cartParts(key);return sum+(p?cartItemPrice(p,part)*qty:0)},0);
   // دریافت روش‌های ارسال از سرور
   try{
@@ -1053,7 +1110,7 @@ $('checkout').onclick=async()=>{
   renderCheckout();
 };
 function done(d,m){const el=d.payment.eitaa_link&&/^https?:\/\//.test(d.payment.eitaa_link);
-$('items').innerHTML=`<div><b>سفارش ثبت شد ✅</b><br>شماره سفارش: <b>${esc(d.order_number)}</b> (نگه دارید)<br>جمع محصولات: ${fa(d.subtotal)}<br>هزینه پست: ${fa(d.shipping)}<br>تخفیف: ${fa(d.discount)}<br>مبلغ قابل پرداخت: <b>${fa(d.total)}</b><br>شماره کارت: <b dir="ltr">${esc(d.payment.card_number||'—')}</b><br>به نام: ${esc(d.payment.card_owner||'—')}<hr><input type="file" id="rf" accept="image/jpeg,image/png,image/webp"><br><button class="btn" id="ru">ارسال رسید در سایت</button>${el?`<br><br><a class="btn" target="_blank" rel="noopener" href="${esc(d.payment.eitaa_link)}">ارسال رسید در ایتا</a>`:''}<p class="note">برای مشاهده وضعیت سفارش، شماره سفارش و موبایل را در بخش <a href="#" onclick="location.href=pagePath('/track');return false" style="color:var(--gold)">پیگیری سفارش</a> وارد کنید.</p></div>`;
+$('items').innerHTML=`<div><b>سفارش ثبت شد ✅</b><br>شماره سفارش: <b>${esc(d.order_number)}</b> (نگه دارید)<br>جمع محصولات: ${fa(d.subtotal)}<br>هزینه پست: ${fa(d.shipping)}<br>تخفیف: ${fa(d.discount)}${d.points_used?`<br>امتیاز مصرف‌شده: <b>${fa(d.points_used)}</b> امتیاز (${fa(d.points_value||0)} تومان)`:''}<br>مبلغ قابل پرداخت: <b>${fa(d.total)}</b><br>شماره کارت: <b dir="ltr">${esc(d.payment.card_number||'—')}</b><br>به نام: ${esc(d.payment.card_owner||'—')}<hr><input type="file" id="rf" accept="image/jpeg,image/png,image/webp"><br><button class="btn" id="ru">ارسال رسید در سایت</button>${el?`<br><br><a class="btn" target="_blank" rel="noopener" href="${esc(d.payment.eitaa_link)}">ارسال رسید در ایتا</a>`:''}<p class="note">برای مشاهده وضعیت سفارش، شماره سفارش و موبایل را در بخش <a href="#" onclick="location.href=pagePath('/track');return false" style="color:var(--gold)">پیگیری سفارش</a> وارد کنید.</p></div>`;
 $('ru').onclick=async()=>{const f=$('rf').files[0];if(!f)return toast('تصویر رسید را انتخاب کنید');const fd=new FormData();fd.append('mobile',m);fd.append('receipt',f);try{const r=await fetch(API+'/api/orders/'+encodeURIComponent(d.order_number)+'/receipt',{method:'POST',body:fd});const x=await r.json().catch(()=>({}));toast(r.ok?'رسید ارسال شد؛ منتظر تأیید باشید':(x.error||'ارسال رسید ناموفق بود'))}catch(_){toast('ارتباط با سرور برقرار نشد')}}}
 const statusNames={order_placed:'سفارش ثبت شد',pending_payment:'در انتظار تأیید پرداخت',receipt_sent:'رسید ارسال شد؛ در انتظار بررسی',payment_confirmed:'پرداخت تأیید شد',payment_rejected:'پرداخت رد شد',preparing:'در حال آماده‌سازی',ready:'آماده ارسال',shipped:'سفارش ارسال شد',delivered:'تکمیل شد',cancelled:'لغو شد'};
 $('trackForm').onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));$('trackResult').innerHTML='<p class="note">در حال دریافت اطلاعات سفارش…</p>';
@@ -1127,7 +1184,7 @@ function renderBanners() {
   html += `<div class="banner-track" id="bannerTrack">`;
   for (const b of items) {
     // اگر category_slug نامعتبر باشد، لینک غیرفعال می‌شود
-    const link = b.category_slug ? `/products?category=${encodeURIComponent(b.category_slug)}` : null;
+    const link = b.category_slug ? pagePath('/products', '?category=' + encodeURIComponent(b.category_slug)) : null;
     if (link) {
       html += `<div class="banner-slide"><a href="${esc(link)}" aria-label="${esc(b.title)}"><img src="${esc(API + b.image)}" alt="${esc(b.title)}" loading="eager" decoding="async"></a></div>`;
     } else {
@@ -1240,7 +1297,7 @@ async function loadHomeBundles(){
       const off = b.original_price && b.original_price > b.bundle_price
         ? Math.round((1 - b.bundle_price / b.original_price) * 100) : 0;
       const imgHtml = b.image
-        ? `<img src="${esc(b.image)}" alt="${esc(b.title)}" loading="lazy">`
+        ? `<img src="${esc(API + b.image)}" alt="${esc(b.title)}" loading="lazy">`
         : '📦';
       html += `<div class="card">
         <div class="ph">${imgHtml}</div>
@@ -1254,29 +1311,6 @@ async function loadHomeBundles(){
     html += '</div>';
     wrap.innerHTML = html;
   } catch(_) { wrap.innerHTML=''; }
-}
-
-// ---------- تب امتیاز در حساب کاربری ----------
-async function loadPointsPanel(){
-  $a('accountPanel').innerHTML = '<p class="note">در حال بارگذاری…</p>';
-  try {
-    const d = await api('/api/account/points');
-    let html = `<div class="box" style="margin-bottom:10px">
-      <h4 style="margin:0 0 6px">موجی امتیاز شما</h4>
-      <p style="font-size:28px;font-weight:800;color:var(--brown);margin:0">${faNum(d.balance||0)} امتیاز</p>
-    </div>`;
-    if ((d.transactions||[]).length) {
-      html += '<h4 style="margin:14px 0 8px;color:var(--brown)">تاریخچه امتیاز</h4>';
-      html += d.transactions.map(t => `<div class="account-order">
-        <b style="color:${t.amount>0?'var(--in)':'var(--out)'}">${t.amount>0?'+':''}${faNum(t.amount)}</b>
-        <p>${esc(t.reason||'')}</p>
-        <small>${new Date(t.created_at).toLocaleString('fa-IR')}</small>
-      </div>`).join('');
-    } else {
-      html += '<p class="note">هنوز تراکنشی ثبت نشده است.</p>';
-    }
-    $a('accountPanel').innerHTML = html;
-  } catch(e) { $a('accountPanel').innerHTML = `<p role="alert">${esc(e.message)}</p>`; }
 }
 
 async function initStore() {
@@ -1309,8 +1343,8 @@ async function initStore() {
     currentSort=e.target.value;
     loadProducts(currentQuery,1,false,currentSort);
   });
-  // خواندن q از URL (مثلاً /products?q=کیف)
-  const urlQ=new URLSearchParams(location.search).get('q')||'';
+  // خواندن q از مسیر جاری (مثلاً /#/products?q=کیف یا /products?q=کیف قدیمی)
+  const urlQ=routeQuery().get('q')||'';
   if(urlQ){$('q').value=urlQ;currentQuery=urlQ;}
 
   draw();
@@ -1329,19 +1363,31 @@ async function initStore() {
     else cats([]);
   } catch (_) { cats([]); }
 
+  await applyRoute();
+}
+
+// ---------- اجرای مسیر جاری (در بارگذاری اولیه و روی hashchange برای Back/Forward) ----------
+async function applyRoute() {
+  normalizeRouteUrl();
   const route = routeOf();
+  // خروج از حالت تمام‌صفحه محصول هنگام تغییر مسیر
+  if (route !== 'product') {
+    document.body.classList.remove('product-page');
+    const pm = document.getElementById('productModal');
+    if (pm) pm.classList.remove('open');
+  }
   // صفحه اختصاصی محصول
-  const _pForMatch = BASE_PATH ? location.pathname.substring(BASE_PATH.length) : location.pathname;
-  const match = _pForMatch.match(/^\/product\/([^/]+)\/?$/);
+  const match = logicalPath().split('?')[0].match(/^\/product\/([^/]+)\/?$/);
   if (match) {
     document.body.classList.add('product-page');
     await openProduct(decodeURIComponent(match[1]));
+    window.scrollTo(0, 0);
     return;
   }
   if (route==='products') {
     showPage('products');
-    // پشتیبانی از ?category=slug در URL (مثلاً وقتی کاربر از بنر می‌آید)
-    const catParam = new URLSearchParams(location.search).get('category');
+    // پشتیبانی از ?category=slug در مسیر (مثلاً وقتی کاربر از بنر می‌آید)
+    const catParam = routeQuery().get('category');
     if (catParam) {
       // پیدا کردن نام دسته‌بندی از categoryList و فعال‌کردن آن
       const found = categoryList.find(c => c.slug === catParam);
@@ -1362,7 +1408,10 @@ async function initStore() {
     showPage('home');
     await loadHomeProducts();
   }
+  window.scrollTo(0, 0);
 }
+// Back/Forward مرورگر و همه تغییرهای hash بدون reload کل سایت مسیر را دوباره اجرا می‌کنند
+window.addEventListener('hashchange', () => { applyRoute(); });
 initStore();
 </script>
 
@@ -1448,6 +1497,28 @@ initStore();
       catch(_) {}
     };
   }catch(e){ $a('accountPanel').innerHTML = `<p role="alert">${esc(e.message)}</p>`; }
+ }
+ // ---------- تب امتیاز در حساب کاربری (در همین اسکوپ تا $a و api در دسترس باشند) ----------
+ async function loadPointsPanel(){
+  $a('accountPanel').innerHTML = '<p class="note">در حال بارگذاری…</p>';
+  try {
+    const d = await api('/api/account/points');
+    let html = `<div class="box" style="margin-bottom:10px">
+      <h4 style="margin:0 0 6px">موجودی امتیاز شما</h4>
+      <p style="font-size:28px;font-weight:800;color:var(--brown);margin:0">${faNum(d.balance||0)} امتیاز</p>
+    </div>`;
+    if ((d.transactions||[]).length) {
+      html += '<h4 style="margin:14px 0 8px;color:var(--brown)">تاریخچه امتیاز</h4>';
+      html += d.transactions.map(t => `<div class="account-order">
+        <b style="color:${t.amount>0?'var(--in)':'var(--out)'}">${t.amount>0?'+':''}${faNum(t.amount)}</b>
+        <p>${esc(t.reason||'')}</p>
+        <small>${new Date(t.created_at).toLocaleString('fa-IR')}</small>
+      </div>`).join('');
+    } else {
+      html += '<p class="note">هنوز تراکنشی ثبت نشده است.</p>';
+    }
+    $a('accountPanel').innerHTML = html;
+  } catch(e) { $a('accountPanel').innerHTML = `<p role="alert">${esc(e.message)}</p>`; }
  }
  async function loadOrders(){
   $a('accountPanel').innerHTML='<p class="note">در حال دریافت سفارش‌ها…</p>';

@@ -9,7 +9,7 @@
 <title>پنل مدیریت زیبادوز</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="../public/config.js"></script>
+<script src="../config.js"></script>
 <style>
 :root{
   --brown:#4a2c1d; --leather:#7a4b30; --nes:#b08968; --cream:#f6efe4; --milk:#fffaf2;
@@ -116,7 +116,7 @@ let API=localStorage.zd_api||'',T=sessionStorage.zd_t||'',CATS=[];
 const $=id=>document.getElementById(id),app=$('app'),fa=n=>Number(n||0).toLocaleString('fa-IR'),
 esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
 normSearch=s=>String(s??'').normalize('NFKC').replace(/[يى]/g,'ی').replace(/ك/g,'ک').toLocaleLowerCase('fa').trim(),
-dt=d=>new Date(d).toLocaleString('fa-IR');
+dt=d=>new Date(d).toLocaleString('fa-IR'),faNum=n=>Number(n||0).toLocaleString('fa-IR');
 const NEXT={pending_payment:['cancelled'],receipt_sent:['cancelled'],payment_rejected:['cancelled'],payment_confirmed:['preparing','ready','shipped','cancelled'],preparing:['ready','shipped','cancelled'],ready:['shipped','cancelled'],shipped:['delivered'],delivered:[],cancelled:[]};
 const ST={order_placed:'سفارش ثبت شد',pending_payment:'در انتظار تأیید پرداخت',receipt_sent:'رسید ارسال شد (در انتظار بررسی)',payment_confirmed:'پرداخت تأیید شد',payment_rejected:'پرداخت رد شد',preparing:'در حال آماده‌سازی',ready:'آماده ارسال',shipped:'سفارش ارسال شد',delivered:'تکمیل شد',cancelled:'لغو شد'};
 function stockBadge(s){
@@ -139,9 +139,9 @@ function login(){app.innerHTML=`<div class="login-card"><div class="login-logo">
   const btn=$('go');btn.disabled=true;btn.textContent='لطفاً صبر کنید…';
   try{const r=await fetch(API+'/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:$('u').value,password:$('p').value})});
   const d=await r.json();if(!r.ok){toast(d.error||'خطا');btn.disabled=false;btn.textContent='ورود';return}T=d.token;sessionStorage.zd_t=T;shell('dash')}catch(e){toast('ارتباط با سرور برقرار نشد');btn.disabled=false;btn.textContent='ورود'}}}
-function shell(v){const tabs={dash:'داشبورد',prod:'محصولات',cat:'دسته‌بندی‌ها',ord:'سفارش‌ها',coupon:'کدهای تخفیف',campaign:'کمپین‌ها',bundle:'بسته‌ها',questions:'پرسش‌ها',banner:'بنرها',reports:'گزارش‌ها',customers:'مشتریان',shipping:'ارسال',set:'تنظیمات'};
+function shell(v){const tabs={dash:'داشبورد',prod:'محصولات',cat:'دسته‌بندی‌ها',ord:'سفارش‌ها',coupon:'کدهای تخفیف',campaign:'کمپین‌ها',bundle:'بسته‌ها',questions:'پرسش‌ها',reviews:'نظرات',banner:'بنرها',reports:'گزارش‌ها',customers:'مشتریان',shipping:'ارسال',set:'تنظیمات'};
  app.innerHTML=`<div class="top"><div class="brand">${LOGO_SVG}<span>پنل زیبادوز</span></div>${Object.entries(tabs).map(([k,n])=>`<button class="${k===v?'on':''}" data-v="${k}">${n}</button>`).join('')}<button class="danger" id="lo">خروج</button></div><main id="m"></main>`;
- app.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>shell(b.dataset.v));$('lo').onclick=logout;({dash,prod,cat,ord,coupon,campaign,bundle,questions,banner,reports,customers,shipping,set})[v]()}
+ app.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>shell(b.dataset.v));$('lo').onclick=logout;({dash,prod,cat,ord,coupon,campaign,bundle,questions,reviews,banner,reports,customers,shipping,set})[v]()}
 async function dash(){const s=await api('/stats'),L={products:'کل محصولات',active:'محصولات فعال',out_of_stock:'ناموجود',pending:'در انتظار پرداخت',review:'در انتظار بررسی رسید',paid:'پرداخت‌شده',pending_completion:'در انتظار تکمیل',preparing:'در حال آماده‌سازی',shipped:'ارسال‌شده'};
  $('m').innerHTML='<div class="cards">'+Object.entries(L).map(([k,n])=>`<div><span class="lbl">${n}</span><b>${fa(s[k])}</b></div>`).join('')+`<div><span class="lbl">مجموع فروش تأییدشده</span><b>${fa(s.revenue)}</b><span class="lbl">تومان</span></div></div>
  <div class="box"><h3>راهنمای سریع</h3><p class="note">برای تغییر سریع موجودی هر محصول، از دکمه سبز/قرمز در فهرست محصولات استفاده کنید. کلیک روی «موجود» آن را «ناموجود» می‌کند (موجودی = ۰) و برعکس.</p></div>`}
@@ -300,7 +300,7 @@ async function ord(){$('m').innerHTML=`<div class="box"><h3>سفارش‌ها</h
  $('clearFinished').onclick=async()=>{if(!confirm('همه سفارش‌های «تکمیل‌شده» و «لغوشده» حذف شوند؟ سفارش‌های در حال پردازش نگه داشته می‌شوند.'))return;try{const r=await api('/orders/clear-finished',{method:'POST',json:{}});toast(`${r.deleted} سفارش پاک شد`);load()}catch(_){}};
  load()}
 async function detail(id){const o=await api('/orders/'+id);
- $('od').innerHTML=`<div class="box"><h3>سفارش ${esc(o.order_number)} — ${ST[o.status]}</h3><p>${esc(o.name)} | ${esc(o.mobile)}<br>${esc(o.province)}، ${esc(o.city)}، ${esc(o.address)} | کدپستی: ${esc(o.postal_code)}<br>توضیحات مشتری: ${esc(o.notes||'—')}</p>
+ $('od').innerHTML=`<div class="box"><h3>سفارش ${esc(o.order_number)} — ${ST[o.status]}</h3><p>${esc(o.name)} | ${esc(o.mobile)}<br>${esc(o.province)}، ${esc(o.city)}، ${esc(o.address)} | کدپستی: ${esc(o.postal_code)}<br>توضیحات مشتری: ${esc(o.notes||'—')}</p>${o.shipping_method_name?`<p><b>روش ارسال:</b> ${esc(o.shipping_method_name)}</p>`:''}
 <div class="tbl"><table><tr><th>محصول</th><th>رنگ</th><th>سایز</th><th>تعداد</th><th>قیمت واحد</th></tr>${o.items.map(i=>`<tr><td>${esc(i.name)}</td><td>${esc(i.color||'—')}</td><td>${esc(i.size||'—')}</td><td>${fa(i.qty)}</td><td>${fa(i.unit_price)}</td></tr>`).join('')}</table></div>
 <p>جمع: ${fa(o.subtotal)} | ارسال: ${fa(o.shipping)} | <b>مبلغ نهایی: ${fa(o.total)} تومان</b></p>
 <h3 style="margin-top:14px">رسیدها</h3><div id="rc">${o.receipts.map(r=>`<div class="th"><img data-r="${r.id}" alt=""><br>${r.status}${r.reject_reason?'<br>'+esc(r.reject_reason):''}</div>`).join('')||'<small>رسیدی ارسال نشده</small>'}</div>
@@ -364,7 +364,7 @@ async function reviewDetail(id){
   if (!r) { toast('نظر پیدا نشد'); return; }
   $('rd').innerHTML = `<div class="box"><h3>نظر ${faNum(r.id)} — ${r.product_name||'—'}</h3>
     <p><b>نویسنده:</b> ${esc(r.author_name||'—')} <small dir="ltr">${esc(r.author_email||r.author_mobile||'')}</small>${r.verified_buyer?' <span class="pill green">خریدار تأییدشده</span>':''}</p>
-    <p><b>محصول:</b> <a href="/product/${esc(r.product_slug||'')}" target="_blank" style="color:var(--gold)">${esc(r.product_name||'—')}</a></p>
+    <p><b>محصول:</b> <a href="../#/product/${esc(r.product_slug||'')}" target="_blank" style="color:var(--gold)">${esc(r.product_name||'—')}</a></p>
     ${r.title?`<p><b>عنوان:</b> ${esc(r.title)}</p>`:''}
     <p><b>امتیاز:</b> <span class="stars" style="font-size:16px">${starsAdmin(r.rating)}</span></p>
     <p><b>متن:</b></p><div style="background:var(--cream);border-radius:8px;padding:10px;white-space:pre-wrap">${esc(r.body||'')}</div>
@@ -437,7 +437,7 @@ async function questionDetail(id){
   const q = all.find(x => String(x.id) === String(id));
   if (!q) { toast('پرسش پیدا نشد'); return; }
   $('qd').innerHTML = `<div class="box"><h3>پرسش ${faNum(q.id)}</h3>
-    <p><b>محصول:</b> <a href="/product/${esc(q.product_slug||'')}" target="_blank" style="color:var(--gold)">${esc(q.product_name||'—')}</a></p>
+    <p><b>محصول:</b> <a href="../#/product/${esc(q.product_slug||'')}" target="_blank" style="color:var(--gold)">${esc(q.product_name||'—')}</a></p>
     <p><b>پرسنده:</b> ${esc(q.asker_name||'—')} <small dir="ltr">${esc(q.asker_email||q.asker_mobile||'')}</small></p>
     <p><b>پرسش:</b></p><div style="background:var(--cream);border-radius:8px;padding:10px;white-space:pre-wrap">${esc(q.question||'')}</div>
     ${q.answer?`<p style="margin-top:10px"><b>پاسخ فعلی:</b></p><div style="background:var(--in-soft);border-radius:8px;padding:10px;white-space:pre-wrap;border-inline-start:3px solid var(--in)">${esc(q.answer)}</div>`:''}
@@ -481,7 +481,7 @@ async function banner(){
   $('m').innerHTML=`<div id="bf"></div><div class="box"><h3>فهرست بنرها</h3><div class="tbl"><table><thead><tr><th>تصویر</th><th>عنوان</th><th>مقصد</th><th>ترتیب</th><th>وضعیت</th><th></th></tr></thead><tbody id="bt"></tbody></table></div></div>`;
   const draw=()=>{
     $('bt').innerHTML=BL.length?BL.map(b=>`<tr>
-      <td><img src="${esc(b.image||'')}" alt="" style="width:80px;height:34px;object-fit:cover;border-radius:4px;border:1px solid var(--line)"></td>
+      <td><img src="${esc(API+(b.image||''))}" alt="" style="width:80px;height:34px;object-fit:cover;border-radius:4px;border:1px solid var(--line)"></td>
       <td><b>${esc(b.title)}</b></td>
       <td>${b.category_name?esc(b.category_name):'<span class="pill gray">— حذف‌شده</span>'}</td>
       <td>${fa(b.sort_order)}</td>
@@ -504,7 +504,7 @@ function bannerForm(b){
     </div>
     <label>تصویر بنر<input name="image" type="file" accept="image/jpeg,image/png,image/webp"></label>
     <small>اندازه پیشنهادی تصویر: ۱۲۰۰ × ۵۰۰ پیکسل | نسبت تصویر: ۱۲:۵ | حداکثر حجم: ۵۰۰ کیلوبایت | فرمت مجاز: WebP، JPG، PNG</small>
-    ${b.image?`<div class="th" style="margin-top:8px"><img src="${esc(b.image)}" alt="" style="width:120px;height:50px;object-fit:cover;border-radius:4px;border:1px solid var(--line)"><label>تصویر فعلی</label></div>`:''}
+    ${b.image?`<div class="th" style="margin-top:8px"><img src="${esc(API+(b.image||''))}" alt="" style="width:120px;height:50px;object-fit:cover;border-radius:4px;border:1px solid var(--line)"><label>تصویر فعلی</label></div>`:''}
     <label style="margin-top:10px"><input type="checkbox" name="is_active" ${b.is_active!==false?'checked':''}> فعال باشد</label>
     <button class="bt g" style="margin-top:12px">${b.id?'ذخیره تغییرات':'افزودن بنر'}</button>
     ${b.id?'<button type="button" class="bt l" id="bnw">بنر جدید</button>':''}
@@ -529,7 +529,7 @@ async function campaign(){
   $('m').innerHTML=`<div id="cf"></div><div class="box"><h3>فهرست کمپین‌ها</h3><div class="tbl"><table><thead><tr><th>عنوان</th><th>تخفیف</th><th>دوره</th><th>وضعیت</th><th></th></tr></thead><tbody id="ct"></tbody></table></div></div>`;
   const draw=()=>{
     $('ct').innerHTML=CAMP.length?CAMP.map(c=>`<tr>
-      <td><b>${esc(c.title)}</b>${c.image?`<br><img src="${esc(c.image)}" style="width:60px;height:25px;object-fit:cover;border-radius:3px;margin-top:3px">`:''}</td>
+      <td><b>${esc(c.title)}</b>${c.image?`<br><img src="${esc(API+(c.image||''))}" style="width:60px;height:25px;object-fit:cover;border-radius:3px;margin-top:3px">`:''}</td>
       <td>${c.discount_type==='percent'?fa(c.discount_value)+'٪':fa(c.discount_value)}</td>
       <td><small>${c.starts_at?new Date(c.starts_at).toLocaleDateString('fa-IR'):''} تا ${c.ends_at?new Date(c.ends_at).toLocaleDateString('fa-IR'):'نامحدود'}</small></td>
       <td>${c.is_active?'<span class="pill green">فعال</span>':'<span class="pill gray">غیرفعال</span>'}</td>
@@ -554,7 +554,7 @@ function campaignForm(c){
       <label>تاریخ پایان (اختیاری)<input name="ends_at" type="datetime-local" value="${c.ends_at?new Date(c.ends_at).toISOString().slice(0,16):''}"></label>
     </div>
     <label>تصویر کمپین (اختیاری)<input name="image" type="file" accept="image/jpeg,image/png,image/webp"></label>
-    ${c.image?`<img src="${esc(c.image)}" style="width:100px;height:42px;object-fit:cover;border-radius:4px;margin:6px 0">`:''}
+    ${c.image?`<img src="${esc(API+(c.image||''))}" style="width:100px;height:42px;object-fit:cover;border-radius:4px;margin:6px 0">`:''}
     <label>توضیحات<textarea name="description" rows="2">${esc(c.description||'')}</textarea></label>
     <div class="g2"><label><input type="checkbox" name="is_active" ${c.is_active!==false?'checked':''}> فعال</label>
     <label><input type="checkbox" name="show_on_homepage" ${c.show_on_homepage?'checked':''}> نمایش در صفحه اصلی</label></div>
