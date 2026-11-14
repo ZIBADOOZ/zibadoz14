@@ -8,4 +8,4 @@
 //   window.ZD_API = "https://zibadoz.dpdns.org";  // آدرس عمومی
 //   window.ZD_API = "http://127.0.0.1:3000";      // آدرس محلی
 // =====================================================
-window.ZD_API = "";
+window.ZD_API = "https://parlq-37-254-153-215.free.pinggy.net";
