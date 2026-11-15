@@ -12,7 +12,7 @@
 
 // آدرس Web App واسط ابری (خروجی Deploy در Apps Script):
 // مثال: https://script.google.com/macros/s/AKfycb.../exec
-window.ZD_RELAY = "";
+window.ZD_RELAY = "https://script.google.com/macros/s/AKfycbw5lnBx1inZ6aetntv6-z1l7zXFQKxivfvcO29NGxAaB8ixJv7HEeFPn-Wa-iSWu907Wg/exec";
 
 // حالت اتصال: "relay" برای سایت عمومی GitHub Pages، "direct" برای اجرای محلی
 "https://script.google.com/macros/s/AKfycbw5lnBx1inZ6aetntv6-z1l7zXFQKxivfvcO29NGxAaB8ixJv7HEeFPn-Wa-iSWu907Wg/exec";
